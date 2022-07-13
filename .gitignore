@@ -1,0 +1,22 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+relayports
+goports
+# Test binary, built with `go test -c`
+*.test
+
+.goreleaser.yaml
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+*.log
+*.upx
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+dist/
+config.json

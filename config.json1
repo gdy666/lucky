@@ -1,0 +1,45 @@
+{
+	"AdminWebListen": ":16601",
+	"ProxyCountLimit": 128,
+	"GlobalMaxConnections": 10240,
+	"RelayRuleList": [
+		{
+			"Name": "FTP",
+			"Configurestr": "tcp@:20000-20010,20021to192.168.31.180",
+			"Enable": true,
+			"Options": {
+				"UDPPackageSize": 1500,
+				"SingleProxyMaxConnections": 256
+			}
+		},
+		{
+			"Name": "Socket5 均衡负载",
+			"Configurestr": "tcp@:6666to192.168.31.180:7890,192.168.31.148:7890",
+			"Enable": true,
+			"Options": {
+				"UDPPackageSize": 1500,
+				"SingleProxyMaxConnections": 256
+			}
+		},
+		{
+			"Name": "FileBrowser",
+			"Configurestr": "tcp@:28888to192.168.31.180",
+			"Enable": true,
+			"Options": {
+				"UDPPackageSize": 1500,
+				"SingleProxyMaxConnections": 256
+			}
+		},
+		{
+			"Name": "DNS转发",
+			"Configurestr": "tcp,udp@:53to192.168.31.1",
+			"Enable": true,
+			"Options": {
+				"UDPPackageSize": 1496,
+				"SingleProxyMaxConnections": 256,
+				"UDPProxyPerformanceMode": true,
+				"UDPShortMode": true
+			}
+		}
+	]
+}
