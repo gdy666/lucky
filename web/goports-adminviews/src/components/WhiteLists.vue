@@ -118,6 +118,7 @@ const flushWhiteListlife = (index, ip, life) => {
         MessageShow("error", res.msg)
 
     }).catch((error) => {
+        console.log( "刷新IP[" + addWhiteListForm.value.IP + "]有效时间出错 "+error)
         MessageShow("error", "刷新IP[" + ip + "]有效时间出错")
     })
 }
@@ -136,12 +137,12 @@ const addWhiteList = () => {
             let item = { IP: addWhiteListForm.value.IP, Effectivetime: res.data }
             whitelist.value.push(item)
             addWhiteListDialogVisible.value = false
-            //MessageShow("success", "白名单添加成功")
             return
         }
         MessageShow("error", res.msg)
 
     }).catch((error) => {
+        console.log( "刷新IP[" + addWhiteListForm.value.IP + "]有效时间出错 "+error)
         MessageShow("error", "刷新IP[" + addWhiteListForm.value.IP + "]有效时间出错")
     })
 }
@@ -178,7 +179,12 @@ const deleteWhiteList = (index, item) => {
 const queryWhiteList = () => {
     apiGetWhiteList().then((res) => {
         if (res.ret == 0) {
-            whitelist.value = res.data
+            if (res.data!=null){
+                whitelist.value = res.data
+            }else{
+                whitelist.value= []
+            }
+           
             return
         }
         MessageShow("error", res.msg)

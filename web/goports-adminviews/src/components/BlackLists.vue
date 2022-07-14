@@ -20,10 +20,10 @@
 
 
 
-                <el-table :data="Blacklist" style="width: 700px"  height="85vh">
+                <el-table :data="Blacklist" style="width: 700px" height="85vh">
                     <el-table-column prop="IP" label="IP" width="200" />
                     <el-table-column prop="Effectivetime" label="有效时间" width="200" />
-                    <el-table-column fixed="right" label="操作" width="300" >
+                    <el-table-column fixed="right" label="操作" width="300">
                         <template #default="list">
                             <el-button link type="primary" size="small"
                                 @click="flushBlackListEffectivetime(list.$index, Blacklist[list.$index], 0, '确认要刷新IP[' + Blacklist[list.$index].IP + ']的有效时间?')">
@@ -76,9 +76,9 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, computed } from 'vue'
-import {  ElMessageBox } from 'element-plus'
-import {MessageShow} from '../utils/ui'
-import {isIP} from '../utils/utils'
+import { ElMessageBox } from 'element-plus'
+import { MessageShow } from '../utils/ui'
+import { isIP } from '../utils/utils'
 
 import { apiGetBlackList, apiFlushBlackList, apiDeleteBlackList } from '../apis/utils'
 var Blacklist = ref([{ IP: "", Effectivetime: "" }])
@@ -138,7 +138,7 @@ const addBlackList = () => {
             let item = { IP: addBlackListForm.value.IP, Effectivetime: res.data }
             Blacklist.value.push(item)
             addBlackListDialogVisible.value = false
-           // MessageShow("success", "黑名单添加成功")
+            // MessageShow("success", "黑名单添加成功")
             return
         }
         MessageShow("error", res.msg)
@@ -179,7 +179,11 @@ const deleteBlackList = (index, item) => {
 const queryBlackList = () => {
     apiGetBlackList().then((res) => {
         if (res.ret == 0) {
-            Blacklist.value = res.data
+            if (res.data != null) {
+                Blacklist.value = res.data
+            } else {
+                Blacklist.value = []
+            }
             return
         }
         MessageShow("error", res.msg)
