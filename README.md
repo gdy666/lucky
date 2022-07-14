@@ -1,7 +1,7 @@
 # goports 
  
 
-一个主要功能和socat类似,主要实现公网ipv6 tcp/udp 转发至 内网ipv4 tcp/udp 的小工具.
+一个主要功能和socat类似,主要实现公网ipv6 tcp/udp 转发至 内网ipv4 tcp/udp 的端口转发小工具.
 
 <!-- TOC -->
 - [goports](#goports)
