@@ -47,7 +47,7 @@
 ## 使用
 
 
-- [百度网盘下载地址](https://pan.baidu.com/s/1NfumD9XjYU3OTeVmbu6vOQ?pwd=6666)
+- [百度网盘下载地址](https://pan.baidu.com/s/16Vwg_OjapWxaghQwY5c_RA?pwd=6666)
     百度网盘版本可能会更新比较频繁,
     
 
