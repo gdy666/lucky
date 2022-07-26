@@ -5,7 +5,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/ljymc/goports/web"
+	"github.com/gdy666/lucky/web"
 	"log"
 )
 

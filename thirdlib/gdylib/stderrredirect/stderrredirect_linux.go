@@ -7,7 +7,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ljymc/goports/thirdlib/gdylib/fileutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 )
 
 var PanicFile *os.File

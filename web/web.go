@@ -21,18 +21,19 @@ import (
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 
+	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/rule"
+	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/ginutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/service"
 	"github.com/golang-jwt/jwt"
-	"github.com/ljymc/goports/base"
-	"github.com/ljymc/goports/config"
-	"github.com/ljymc/goports/rule"
-	"github.com/ljymc/goports/thirdlib/gdylib/fileutils"
-	"github.com/ljymc/goports/thirdlib/gdylib/ginutils"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
 )
 
-//go:embed goports-adminviews/dist
+//go:embed adminviews/dist
 var staticFs embed.FS
 var stafs fs.FS
 var loginErrorCount = int32(0)
@@ -43,8 +44,8 @@ var rebootOnce sync.Once
 //var cookieStore cookie.Store
 
 func init() {
-	stafs, _ = fs.Sub(staticFs, "goports-adminviews/dist")
-	//cookieStore = cookie.NewStore([]byte("goports2022"))
+	stafs, _ = fs.Sub(staticFs, "adminviews/dist")
+	//cookieStore = cookie.NewStore([]byte("lucky2022"))
 }
 
 func RunAdminWeb(listen string) {
@@ -62,7 +63,7 @@ func RunAdminWeb(listen string) {
 
 	r.Use(checkLocalIP)
 
-	//r.Use(sessions.Sessions("goportssession", cookieStore))
+	//r.Use(sessions.Sessions("luckysession", cookieStore))
 
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
 
@@ -98,9 +99,21 @@ func RunAdminWeb(listen string) {
 		authorized.GET("/api/blacklist", queryblacklist)
 		authorized.PUT("/api/blacklist/flush", flushblacklist)
 		authorized.DELETE("/api/blacklist", deleteblacklist)
+		authorized.POST("/api/ddns", addDDNS)
+		authorized.PUT("/api/ddns", alterDDNSTask)
+		authorized.GET("/api/ddnstasklist", ddnsTaskList)
+		authorized.DELETE("/api/ddns", deleteDDNSTask)
+		authorized.GET("/api/ddns/enable", enableddns)
+		authorized.GET("/api/ddns/configure", ddnsconfigure)
+		authorized.PUT("/api/ddns/configure", alterDDNSConfigure)
+		authorized.GET("/api/netinterfaces", netinterfaces)
+		authorized.GET("/api/ipregtest", IPRegTest)
+		authorized.POST("/api/webhooktest", webhookTest)
+		authorized.GET("/api/info", info)
 		r.PUT("/api/logout", logout)
 	}
 	r.POST("/api/login", login)
+	//r.GET("/FreeOSMemory", FreeOSMemory)
 
 	r.GET("/wl", whitelistBasicAuth, whilelistAdd)
 	r.GET("/wl/:url", whitelistBasicAuth, whilelistAdd)
@@ -115,6 +128,213 @@ func RunAdminWeb(listen string) {
 		time.Sleep(time.Minute)
 		os.Exit(1)
 	}
+}
+
+// func FreeOSMemory(c *gin.Context) {
+// 	debug.FreeOSMemory()
+// 	c.JSON(http.StatusOK, gin.H{"ret": 0})
+// }
+
+func info(c *gin.Context) {
+	info := config.GetAppInfo()
+	// var info struct {
+	// 	Version string
+	// 	OS      string
+	// 	ARCH    string
+	// 	Date    string
+	// }
+
+	// info.Version =
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "info": *info})
+}
+
+func enableddns(c *gin.Context) {
+	enable := c.Query("enable")
+	key := c.Query("key")
+
+	var err error
+
+	if enable == "true" {
+		err = config.EnableDDNSTaskByKey(key, true)
+		if err == nil {
+			service.Message("ddns", "syncDDNSTask", key)
+		}
+	} else {
+		err = config.EnableDDNSTaskByKey(key, false)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("开关DDNS任务出错:%s", err.Error())})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
+}
+
+func deleteDDNSTask(c *gin.Context) {
+	taskKey := c.Query("key")
+	err := config.DDNSTaskListDelete(taskKey)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Errorf("删除DDNS任务出错:%s", err.Error())})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
+}
+
+func ddnsTaskList(c *gin.Context) {
+
+	conf := config.GetDDNSConfigure()
+
+	if !conf.Enable {
+		c.JSON(http.StatusOK, gin.H{"ret": 6, "msg": "请先在设置页面启用DDNS动态域名服务"})
+		return
+	}
+
+	taskList := config.GetDDNSTaskList()
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": taskList})
+}
+
+func addDDNS(c *gin.Context) {
+	var requestObj config.DDNSTask
+
+	err := c.BindJSON(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
+		return
+	}
+	//fmt.Printf("addDDNS requestObj:%v\n", requestObj)
+	err = config.CheckDDNSTaskAvalid(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
+		return
+	}
+
+	dealRequestDDNSTask(&requestObj)
+
+	err = config.DDNSTaskListAdd(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "DDNS任务添加出错"})
+		return
+	}
+
+	if requestObj.Enable {
+		service.Message("ddns", "syncDDNSTask", requestObj.TaskKey)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
+}
+
+func alterDDNSTask(c *gin.Context) {
+	taskKey := c.Query("key")
+	var requestObj config.DDNSTask
+	err := c.BindJSON(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
+		return
+	}
+
+	err = config.CheckDDNSTaskAvalid(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
+		return
+	}
+	dealRequestDDNSTask(&requestObj)
+
+	err = config.UpdateTaskToDDNSTaskList(taskKey, requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("更新DDNS任务出错:%s", err.Error())})
+		return
+	}
+
+	if requestObj.Enable {
+		service.Message("ddns", "syncDDNSTask", taskKey)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
+
+}
+
+func dealRequestDDNSTask(t *config.DDNSTask) {
+
+	if t.DNS.Name == "callback" {
+		t.DNS.ID = ""
+		t.DNS.Secret = ""
+		t.DNS.Callback.URL = strings.TrimSpace(t.DNS.Callback.URL)
+		//requestObj.DNS.Callback.CallbackSuccessContent = strings.TrimSpace(requestObj.DNS.Callback.CallbackSuccessContent)
+		t.DNS.Callback.RequestBody = strings.TrimSpace(t.DNS.Callback.RequestBody)
+	} else {
+		t.DNS.Callback = config.DNSCallback{}
+	}
+
+	if !t.DNS.ResolverDoaminCheck && len(t.DNS.DNSServerList) > 0 {
+		t.DNS.DNSServerList = []string{}
+	}
+
+	if t.DNS.ResolverDoaminCheck && (len(t.DNS.DNSServerList) == 0 || (len(t.DNS.DNSServerList) == 1 && t.DNS.DNSServerList[0] == "")) {
+		if t.TaskType == "IPv6" {
+			t.DNS.DNSServerList = config.DefaultIPv6DNSServerList
+		} else {
+			t.DNS.DNSServerList = config.DefaultIPv4DNSServerList
+		}
+	}
+
+	if t.DNS.HttpClientProxyType != "" && t.DNS.HttpClientProxyAddr == "" {
+		t.DNS.HttpClientProxyType = ""
+	}
+
+	if t.DNS.HttpClientProxyType == "" {
+		t.DNS.HttpClientProxyAddr = ""
+		t.DNS.HttpClientProxyUser = ""
+		t.DNS.HttpClientProxyPassword = ""
+	}
+
+	if t.GetType == "url" {
+		t.NetInterface = ""
+		t.IPReg = ""
+	}
+
+	if t.GetType == "netInterface" {
+		t.URL = []string{}
+	}
+
+	if !t.WebhookEnable {
+		t.WebhookHeaders = []string{}
+		t.WebhookMethod = ""
+		t.WebhookRequestBody = ""
+		t.WebhookURL = ""
+		t.WebhookSuccessContent = []string{}
+		t.WebhookProxy = ""
+		t.WebhookProxyAddr = ""
+		t.WebhookProxyUser = ""
+		t.WebhookProxyPassword = ""
+	}
+
+	if t.WebhookEnable {
+		if t.WebhookMethod == "get" {
+			t.WebhookRequestBody = ""
+		}
+
+		if t.WebhookProxy == "" {
+			t.WebhookProxyAddr = ""
+			t.WebhookProxyUser = ""
+			t.WebhookProxyPassword = ""
+		}
+	}
+
+	if t.DNS.ForceInterval < 60 {
+		t.DNS.ForceInterval = 60
+	} else if t.DNS.ForceInterval > 360000 {
+		t.DNS.ForceInterval = 360000
+	}
+
+	if t.HttpClientTimeout < 3 {
+		t.HttpClientTimeout = 3
+	} else if t.HttpClientTimeout > 60 {
+		t.HttpClientTimeout = 60
+	}
+
 }
 
 func logout(c *gin.Context) {
@@ -376,9 +596,111 @@ func alterBaseConfigure(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ret": 0})
 }
 
+func alterDDNSConfigure(c *gin.Context) {
+	var requestObj config.DDNSConfigure
+	err := c.BindJSON(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
+		return
+	}
+
+	preConfigure := config.GetDDNSConfigure()
+
+	if preConfigure.Enable != requestObj.Enable {
+
+		//log.Printf("动态服务服务状态改变:%v", requestObj.Enable)
+		if requestObj.Enable {
+			service.Start("ddns")
+		} else {
+			service.Stop("ddns")
+		}
+
+	}
+
+	err = config.SetDDNSConfigure(&requestObj)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": "保存配置过程发生错误,请检测相关启动配置"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ret": 0})
+}
+
 func baseconfigure(c *gin.Context) {
 	conf := config.GetBaseConfigure()
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "baseconfigure": conf})
+}
+
+func netinterfaces(c *gin.Context) {
+	ipv4NetInterfaces, ipv6Netinterfaces, err := config.GetNetInterface()
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("获取网卡列表出错：%s", err.Error())})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": gin.H{"IPv6NewInterfaces": ipv6Netinterfaces, "IPv4NewInterfaces": ipv4NetInterfaces}})
+}
+
+func webhookTest(c *gin.Context) {
+	key := c.Query("key")
+	ddnsTask := config.GetDDNSTaskByKey(key)
+
+	if ddnsTask == nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("找不到key对应的DDNS任务:%s", key)})
+		return
+	}
+
+	var request struct {
+		WebhookURL            string   `json:"WebhookURL"`
+		WebhookMethod         string   `json:"WebhookMethod"`
+		WebhookHeaders        []string `json:"WebhookHeaders"`
+		WebhookRequestBody    string   `json:"WebhookRequestBody"`
+		WebhookSuccessContent []string `json:"WebhookSuccessContent"` //接口调用成功包含的内容
+		WebhookProxy          string   `json:"WebhookProxy"`          //使用DNS代理设置  ""表示禁用，"dns"表示使用dns的代理设置
+		WebhookProxyAddr      string   `json:"WebhookProxyAddr"`      //代理服务器IP
+		WebhookProxyUser      string   `json:"WebhookProxyUser"`      //代理用户
+		WebhookProxyPassword  string   `json:"WebhookProxyPassword"`  //代理密码
+	}
+	err := c.Bind(&request)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("请求解析出错:%s", err.Error())})
+		return
+	}
+
+	responseStr, err := config.WebhookTest(&ddnsTask.DDNSTask,
+		request.WebhookURL,
+		request.WebhookMethod,
+		request.WebhookRequestBody,
+		request.WebhookProxy,
+		request.WebhookProxyAddr,
+		request.WebhookProxyUser,
+		request.WebhookProxyPassword,
+		request.WebhookHeaders,
+		request.WebhookSuccessContent)
+
+	//fmt.Printf("request:%s\n", request)
+
+	msg := "Webhook接口调用成功"
+	if err != nil {
+		msg = err.Error()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": msg, "Response": responseStr})
+}
+
+func IPRegTest(c *gin.Context) {
+	iptype := c.Query("iptype")
+	netinterface := c.Query("netinterface")
+	ipreg := c.Query("ipreg")
+
+	ip := config.GetIPFromNetInterface(iptype, netinterface, ipreg)
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "ip": ip})
+}
+
+func ddnsconfigure(c *gin.Context) {
+	conf := config.GetDDNSConfigure()
+
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "ddnsconfigure": conf})
 }
 
 func enablerule(c *gin.Context) {
@@ -483,10 +805,6 @@ func addrule(c *gin.Context) {
 		return
 	}
 
-	// configureStr := fmt.Sprintf("%s@%s:%sto%s:%s",
-	// 	requestRule.RelayType,
-	// 	requestRule.ListenIP, requestRule.ListenPorts,
-	// 	requestRule.TargetIP, requestRule.TargetPorts)
 	configureStr := requestRule.CreateMainConfigure()
 
 	r, err := rule.CreateRuleByConfigureAndOptions(requestRule.Name, configureStr, requestRule.Options)

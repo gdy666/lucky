@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ljymc/goports/thirdlib/gdylib/pool"
+	"github.com/gdy666/lucky/thirdlib/gdylib/pool"
 )
 
 type Proxy interface {

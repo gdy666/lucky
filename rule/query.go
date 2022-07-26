@@ -2,7 +2,7 @@
 package rule
 
 import (
-	"github.com/ljymc/goports/base"
+	"github.com/gdy666/lucky/base"
 )
 
 type RelayRuleProxyInfo struct {

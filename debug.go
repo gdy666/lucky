@@ -6,7 +6,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/ljymc/goports/thirdlib/gdylib/recoverutil"
+	"github.com/gdy666/lucky/thirdlib/gdylib/recoverutil"
 )
 
 func init() {

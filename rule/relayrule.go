@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ljymc/goports/base"
+	"github.com/gdy666/lucky/base"
 )
 
 type RelayRule struct {

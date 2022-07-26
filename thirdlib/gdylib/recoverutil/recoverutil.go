@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ljymc/goports/thirdlib/gdylib/fileutils"
-	"github.com/ljymc/goports/thirdlib/gdylib/stderrredirect"
+	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/stderrredirect"
 )
 
 //RecoverHandler 恢复处理

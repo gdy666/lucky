@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/fatedier/golib/errors"
-	"github.com/ljymc/goports/thirdlib/gdylib/pool"
+	"github.com/gdy666/lucky/thirdlib/gdylib/pool"
 )
 
 const UDP_DEFAULT_PACKAGE_SIZE = 1500

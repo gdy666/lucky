@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/ljymc/goports/base"
-	"github.com/ljymc/goports/thirdlib/gdylib/fileutils"
-	"github.com/ljymc/goports/thirdlib/gdylib/stringsp"
+	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 )
 
 const defaultAdminAccount = "666"
@@ -60,6 +60,8 @@ type ProgramConfigure struct {
 	RelayRuleList      []ConfigureRelayRule `json:"RelayRuleList"`
 	WhiteListConfigure WhiteListConfigure   `json:"WhiteListConfigure"`
 	BlackListConfigure BlackListConfigure   `json:"BlackListConfigure"`
+	DDNSConfigure      DDNSConfigure        `json:"DDNSConfigure"` //DDNS 参数设置
+	DDNSTaskList       []DDNSTask           `json:"DDNSTaskList"`
 }
 
 var programConfigureMutex sync.RWMutex
@@ -69,6 +71,10 @@ var configurePath string
 //var readConfigureFileOnce sync.Once
 var checkConfigureFileOnce sync.Once
 var configureFileSign int8 = -1
+
+// func GetConfigMutex() *sync.RWMutex {
+// 	return &programConfigureMutex
+// }
 
 func GetAuthAccount() map[string]string {
 	programConfigureMutex.RLock()
@@ -103,6 +109,13 @@ func GetBaseConfigure() BaseConfigure {
 	return baseConf
 }
 
+func GetDDNSConfigure() DDNSConfigure {
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
+	conf := programConfigure.DDNSConfigure
+	return conf
+}
+
 //保存基础配置
 func SetBaseConfigure(conf *BaseConfigure) error {
 	programConfigureMutex.Lock()
@@ -112,6 +125,30 @@ func SetBaseConfigure(conf *BaseConfigure) error {
 	base.SetGlobalMaxConnections(conf.GlobalMaxConnections)
 	base.SetGlobalMaxProxyCount(conf.ProxyCountLimit)
 
+	return Save()
+}
+
+func SetDDNSConfigure(conf *DDNSConfigure) error {
+	programConfigureMutex.Lock()
+	defer programConfigureMutex.Unlock()
+
+	if conf.Intervals < 30 {
+		conf.Intervals = 30
+	}
+
+	if conf.Intervals > 3600 {
+		conf.Intervals = 3600
+	}
+
+	if conf.FirstCheckDelay < 0 {
+		conf.FirstCheckDelay = 0
+	}
+
+	if conf.FirstCheckDelay > 3600 {
+		conf.FirstCheckDelay = 3600
+	}
+
+	programConfigure.DDNSConfigure = *conf
 	return Save()
 }
 
@@ -224,6 +261,14 @@ func loadDefaultConfigure(
 
 	if pc.BaseConfigure.AdminWebListenPort <= 0 {
 		pc.BaseConfigure.AdminWebListenPort = defaultAdminListenPort
+	}
+
+	if pc.DDNSConfigure.Intervals < 30 {
+		pc.DDNSConfigure.Intervals = 30
+	}
+
+	if pc.DDNSConfigure.FirstCheckDelay <= 0 {
+		pc.DDNSConfigure.FirstCheckDelay = 0
 	}
 
 	return &pc

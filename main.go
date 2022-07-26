@@ -10,9 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ljymc/goports/base"
-	"github.com/ljymc/goports/config"
-	"github.com/ljymc/goports/rule"
+	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddns"
+	"github.com/gdy666/lucky/rule"
 )
 
 var (
@@ -28,17 +29,16 @@ var (
 
 var (
 	runMode = "prod"
-	version = "unknown"
+	version = "dev"
 	commit  = "none"
 	date    = "unknown"
 )
 
 var runTime time.Time
 
-// go build && ./goports 127.0.0.199:7000,443to192.168.31.1:80,443 20100-20110to192.168.31.1:20100-20110
 func main() {
-
 	flag.Parse()
+	config.InitAppInfo(version, date)
 
 	err := config.Read(*configureFileURL)
 	if err != nil {
@@ -81,6 +81,15 @@ func main() {
 	LoadRuleFromConfigFile(gcf)
 
 	rule.EnableAllRelayRule() //开启规则
+
+	config.DDNSTaskListTaskDetailsInit()
+	ddnsConf := config.GetDDNSConfigure()
+	if ddnsConf.Enable {
+		ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)
+	}
+
+	//ddns.RunTimer(time.Second, time.Second*30)
+
 	//initProxyList()
 
 	//*****************

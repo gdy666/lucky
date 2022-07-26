@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ljymc/goports/base"
-	"github.com/ljymc/goports/config"
+	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/config"
 )
 
 var globalRelayRules *[]RelayRule

@@ -1,2 +1,2 @@
-cd ./web/goports-adminviews
+cd ./web/adminviews
 npm run build

@@ -5,7 +5,7 @@
 *.so
 *.dylib
 relayports
-goports
+lucky
 # Test binary, built with `go test -c`
 *.test
 
@@ -15,6 +15,7 @@ goports
 *.out
 *.log
 *.upx
+
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

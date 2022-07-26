@@ -7,7 +7,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/ljymc/goports/thirdlib/gdylib/fileutils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 )
 
 //错误输出重定向,用于捕获闪退信息
