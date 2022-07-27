@@ -99,10 +99,12 @@ func syncDDNSTask(task *config.DDNSTaskDetails) {
 	default:
 		return
 	}
+
 	dnsSelected.Init(&task.DDNSTask)
 	dnsSelected.AddUpdateDomainRecords()
 
 	//task.DomainsState.IpAddr = ipaddr
 	task.ExecWebhook(&task.DomainsState)
+
 	config.DDNSTaskListFlushDomainsDetails(task.TaskKey, &task.DomainsState)
 }

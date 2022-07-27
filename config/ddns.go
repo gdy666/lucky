@@ -265,7 +265,7 @@ func GetDDNSTaskByKey(taskKey string) *DDNSTaskDetails {
 	var info DDNSTaskDetails
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.Mutex.RLock()
 	info.DDNSTask = programConfigure.DDNSTaskList[taskIndex]
-	info.DomainsState = programConfigure.DDNSTaskList[taskIndex].DomainsState
+	info.TaskState = programConfigure.DDNSTaskList[taskIndex].DomainsState
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.Mutex.RUnlock()
 	return &info
 }
@@ -436,6 +436,8 @@ func UpdateTaskToDDNSTaskList(taskKey string, task DDNSTask) error {
 	programConfigure.DDNSTaskList[taskIndex].TTL = task.TTL
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.IpAddr = ""
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.Init(task.Domains)
+	programConfigure.DDNSTaskList[taskIndex].DomainsState.IPAddrHistory = task.DomainsState.IPAddrHistory
+	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallHistroy = task.DomainsState.WebhookCallHistroy
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
 	programConfigure.DDNSTaskList[taskIndex].HttpClientTimeout = task.HttpClientTimeout
 	return Save()

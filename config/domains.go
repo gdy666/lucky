@@ -75,6 +75,7 @@ func (d *DomainsState) SetIPAddr(ipaddr string) {
 	if d.IpAddr == ipaddr {
 		return
 	}
+
 	d.IpAddr = ipaddr
 
 	hi := IPAddrHistoryItem{IPaddr: ipaddr, RecordTime: time.Now().Local().Format("2006-01-02 15:04:05")}

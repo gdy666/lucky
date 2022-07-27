@@ -75,7 +75,7 @@
                                 </el-tooltip>
 
 
-                                <el-tooltip class="box-item" effect="dark" content="单端口最大并发数" placement="bottom">
+                                <el-tooltip class="box-item" effect="dark" content="单端口最大连接数" placement="bottom">
                                     <el-button color="#6666ff" size="small" v-show="true">{{
                                             rule.Options.SingleProxyMaxConnections
                                     }}</el-button>
@@ -240,7 +240,7 @@
                             v-show="form.IsBalanceRelayType ? false : true">
                             <el-input v-model="form.TargetPorts" autocomplete="off" placeholder="监听端口的数量和目标端口的数量要一致" />
                         </el-form-item>
-                        <el-form-item label="单端口最大并发数" :label-width="formLabelWidth">
+                        <el-form-item label="单端口最大连接数" :label-width="formLabelWidth">
                             <el-input-number v-model="form.Options.SingleProxyMaxConnections" :min="1" :max="65535" />
                         </el-form-item>
                         <el-form-item label="UDP最大包长度" :label-width="formLabelWidth" v-show="udpOptionsShow">
@@ -282,7 +282,7 @@ import { onMounted, onUnmounted, ref, computed, reactive } from 'vue'
 
 //import { ElMessage } from 'element-plus'
 import {CopyTotoClipboard} from '../utils/utils'
-import { ElNotification } from 'element-plus'
+import { CheckboxValueType, ElNotification } from 'element-plus'
 import { ElMessageBox } from 'element-plus'
 
 
@@ -883,16 +883,16 @@ const checkAllRelayType = ref(false)
 const isIndeterminate = ref(true)
 //const checkedProxyTypes = ref(['tcp4', 'tcp6'])
 const proxyTypes = ['tcp4', 'tcp6', 'udp4', 'udp6']
-const handleCheckAllChange = (val: boolean) => {
+const handleCheckAllChange = (val: CheckboxValueType) => {
     // checkedProxyTypes.value = val ? proxyTypes : []
     form.value.RelayType = val ? 'tcp4,tcp6,udp4,udp6' : ''
     dialogRelayType.value = val ? ['tcp4', 'tcp6', 'udp4', 'udp6'] : []
     isIndeterminate.value = false
     flushUdpOptionsView()
-    // console.log("proxyType 全选: "+val)
+     console.log("proxyType 全选: "+val)
     // console.log("proxyType: "+form.value.proxyType)
 }
-const handleCheckedProxyTypesChange = (value: string[]) => {
+const handleCheckedProxyTypesChange = (value: CheckboxValueType[]) => {
     const checkedCount = value.length
     checkAllRelayType.value = checkedCount === proxyTypes.length
     isIndeterminate.value = checkedCount > 0 && checkedCount < proxyTypes.length
@@ -914,12 +914,12 @@ const sortArray = (array) => {
     return array
 }
 
-const getRelayTypeByList = (list: string[]) => {
+const getRelayTypeByList = (list: CheckboxValueType[]) => {
     var res = ""
     //list = sortArray(list)
     for (let s of list) {
         if (res.length == 0) {
-            res = s
+            res += s
             continue
         }
         res += "," + s

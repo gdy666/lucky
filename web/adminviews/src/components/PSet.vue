@@ -38,7 +38,7 @@
                 <el-input-number v-model="form.ProxyCountLimit" autocomplete="off" :min="1" :max="1024" />
             </el-form-item>
 
-            <el-form-item label="全局最大并发连接数" id="globalMaxConnections">
+            <el-form-item label="全局最大连接数" id="globalMaxConnections">
                 <el-input-number v-model="form.GlobalMaxConnections" autocomplete="off" :min="1" :max="65535" />
             </el-form-item>
 

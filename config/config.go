@@ -52,7 +52,7 @@ type BaseConfigure struct {
 	AdminAccount         string `json:"AdminAccount"`         //登录账号
 	AdminPassword        string `json:"AdminPassword"`        //登录密码
 	AllowInternetaccess  bool   `json:"AllowInternetaccess"`  //允许外网访问
-	GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大并发连接数
+	GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大连接数
 }
 
 type ProgramConfigure struct {
