@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -146,6 +147,7 @@ func (s *Service) loop(params ...any) {
 			return
 		}
 		log.Printf("service[%s] panic:\n%v", s.Name, recoverErr)
+		log.Printf("\n%s\n", debug.Stack())
 		s.State = StateStop
 		log.Printf("server[%s] restart", s.Name)
 		s.Start()

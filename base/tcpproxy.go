@@ -98,6 +98,7 @@ func (p *TCPProxy) StartProxy() {
 				newConn.Close()
 				continue
 			}
+			//log.Printf("[%s]新连接[%s]安全检查通过", p.GetKey(), newConnAddr)
 
 			//fmt.Printf("连接IP:[%s]\n", newConn.RemoteAddr().String())
 

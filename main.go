@@ -31,7 +31,7 @@ var (
 	runMode = "prod"
 	version = "dev"
 	commit  = "none"
-	date    = "unknown"
+	date    = "2022-07-27T17:54:45Z"
 )
 
 var runTime time.Time

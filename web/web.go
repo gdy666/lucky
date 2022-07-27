@@ -741,6 +741,8 @@ func alterrule(c *gin.Context) {
 		return
 	}
 
+	dealRequestRule(&requestRule)
+
 	//fmt.Printf("balance:%v\n", requestRule.BalanceTargetAddressList)
 
 	preConfigureStr := requestRule.MainConfigure
@@ -797,6 +799,16 @@ func deleterule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": "删除成功", "syncres": syncRes})
 }
 
+func dealRequestRule(r *rule.RelayRule) {
+	r.ListenPorts = strings.TrimSpace(r.ListenPorts)
+	r.TargetPorts = strings.TrimSpace(r.TargetPorts)
+	r.ListenIP = strings.TrimSpace(r.ListenIP)
+	r.TargetIP = strings.TrimSpace(r.TargetIP)
+	r.RelayType = strings.TrimSpace(r.RelayType)
+	r.Name = strings.TrimSpace(r.Name)
+
+}
+
 func addrule(c *gin.Context) {
 	var requestRule rule.RelayRule
 	err := c.BindJSON(&requestRule)
@@ -804,6 +816,8 @@ func addrule(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("请求解析出错:%s", err.Error())})
 		return
 	}
+
+	dealRequestRule(&requestRule)
 
 	configureStr := requestRule.CreateMainConfigure()
 
@@ -897,6 +911,8 @@ func status(c *gin.Context) {
 	// 	proxyStatusList = append(proxyStatusList, p.GetStatus())
 	// }
 
+	appInfo := config.GetAppInfo()
+
 	respMap := make(map[string]interface{})
 	respMap["totleMem"] = formatFileSize(v.Total)
 	respMap["usedMem"] = formatFileSize(v.Used)
@@ -907,6 +923,7 @@ func status(c *gin.Context) {
 	respMap["currentConnections"] = fmt.Sprintf("%d", base.GetGlobalConnections())
 	respMap["maxConnections"] = fmt.Sprintf("%d", base.GetGlobalMaxConnections())
 	respMap["usedCPU"] = fmt.Sprintf("%.2f%%", GetCpuPercent())
+	respMap["runTime"] = appInfo.RunTime
 	//respMap["proxysStatus"] = proxyStatusList
 
 	c.JSON(http.StatusOK, gin.H{

@@ -440,6 +440,10 @@ func UpdateTaskToDDNSTaskList(taskKey string, task DDNSTask) error {
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallHistroy = task.DomainsState.WebhookCallHistroy
 	programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
 	programConfigure.DDNSTaskList[taskIndex].HttpClientTimeout = task.HttpClientTimeout
+	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallErrorMsg = ""
+	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallResult = false
+	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallTime = ""
+
 	return Save()
 }
 

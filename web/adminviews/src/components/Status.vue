@@ -6,6 +6,7 @@
         <p class="status">进程协程数:{{ status.goroutine }} 占用内存:{{ status.processUsedMem }}</p>
         <p class="status">Lucky 全局连接数:{{ status.currentConnections }} </p>
         <p class="status">Lucky 全局限制连接数:{{ status.maxConnections }}</p>
+        <p class="status">Lucky 启动时间:{{ status.runTime }}</p>
 
 
 
@@ -63,7 +64,8 @@ var status=ref({totleMem: '0m',
             processUsedMem:"0m",
             currentConnections:0,
             maxConnections:0,
-            proxysStatus:""})
+            proxysStatus:"",
+            runTime:""})
 
 var timerID:any
 

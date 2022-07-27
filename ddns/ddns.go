@@ -2,6 +2,7 @@ package ddns
 
 import (
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -50,6 +51,7 @@ func syncAllDomainsOnce(params ...any) {
 					return
 				}
 				log.Printf("syncDDNSTask[%s]panic:\n%v", task.TaskName, recoverErr)
+				log.Printf("%s", debug.Stack())
 			}()
 			syncDDNSTask(&task)
 		}()
