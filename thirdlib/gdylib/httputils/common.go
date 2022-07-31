@@ -33,8 +33,8 @@ func GetAndParseJSONResponseFromHttpResponse(resp *http.Response, result interfa
 
 //GetStringFromHttpResponse 从response获取
 func GetBytesFromHttpResponse(resp *http.Response) ([]byte, error) {
-	if resp.Body == nil {
-		return []byte{}, nil
+	if resp == nil || resp.Body == nil {
+		return []byte{}, fmt.Errorf("resp.Body = nil")
 	}
 	defer resp.Body.Close()
 	var body []byte
