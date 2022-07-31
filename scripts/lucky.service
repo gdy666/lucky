@@ -1,0 +1,15 @@
+[Unit]
+Description=lucky
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/etc/lucky/lucky -c /etc/lucky/lucky.conf >/dev/null
+Restart=on-failure
+RestartSec=3s
+LimitNOFILE=999999
+
+
+[Install]
+WantedBy=multi-user.target

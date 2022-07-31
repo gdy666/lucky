@@ -125,7 +125,6 @@ func RunAdminWeb(listen string) {
 
 	if err != nil {
 		log.Printf("http.ListenAndServe error:%s", err.Error())
-		time.Sleep(time.Minute)
 		os.Exit(1)
 	}
 }
