@@ -5,6 +5,7 @@
   - [特性](#特性)
   - [一键安装](#一键安装)
   - [使用](#使用)
+  - [Docker中使用](#docker中使用)
   - [转发规则格式](#转发规则格式)
   - [其它启动参数](#其它启动参数)
   - [后台界面](#后台界面)
@@ -74,6 +75,27 @@
     #指定后台端口8899 
     lucky -p 8899 <转发规则1> <转发规则2> <转发规则3>...<<转发规则N>
     ```
+
+
+## Docker中使用
+
+- 不挂载主机目录, 删除容器同时会删除配置
+
+  ```bash
+  # host模式, 同时支持IPv4/IPv6, Liunx系统推荐
+  docker run -d --name lucky --restart=always --net=host gdy666/lucky
+  # 桥接模式, 只支持IPv4, Mac/Windows推荐,windows另外会有专用版本支持ipv6,待开发
+  docker run -d --name lucky --restart=always -p 16601:16601 gdy666/lucky
+  ```
+
+- 在浏览器中打开`http://主机IP:16601`，修改你的配置，成功
+- [可选] 挂载主机目录, 删除容器后配置不会丢失。可替换 `/root/luckyconf` 为主机目录, 配置文件为lucky.conf
+
+  ```bash
+  docker run -d --name lucky --restart=always --net=host -v /root/luckyconf:/goodluck gdy666/lucky
+  ```
+
+
 
 ## 转发规则格式
     例子1
