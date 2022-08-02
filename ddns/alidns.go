@@ -64,6 +64,9 @@ func (ali *Alidns) createUpdateDomain(recordType, ipAddr string, domain *config.
 	err := ali.request(params, &record)
 
 	if err != nil {
+		errMsg := "更新失败[001]:\n"
+		errMsg += err.Error()
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 

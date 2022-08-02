@@ -98,8 +98,33 @@ func SetRunMode(mode string) {
 	runMode = mode
 }
 
+func SetConfig(p *ProgramConfigure) error {
+	programConfigureMutex.Lock()
+	defer programConfigureMutex.Unlock()
+	programConfigure = p
+	return Save()
+}
+
 func GetConfig() *ProgramConfigure {
-	return programConfigure
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
+	var conf ProgramConfigure
+	conf = *programConfigure
+	return &conf
+}
+
+func GetConfigureBytes() []byte {
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
+	if programConfigure == nil {
+		return []byte("{}")
+	}
+	//JSON.Pars
+	res, err := json.MarshalIndent(*programConfigure, "", "\t")
+	if err != nil {
+		return []byte("{}")
+	}
+	return res
 }
 
 func GetBaseConfigure() BaseConfigure {

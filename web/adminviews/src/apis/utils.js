@@ -319,3 +319,22 @@ export function apiGetAPPInfo() {
 		params:{_:new Date().valueOf()}
 	})
 }
+
+
+export function apiGetRestoreConfigureConfirm(key) {
+    return httpRequest({
+		url: '/api/restoreconfigureconfirm',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:key}
+	})
+}
+
+export function apiGetConfigure() {
+    return httpRequest({
+		url: '/api/configure',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}

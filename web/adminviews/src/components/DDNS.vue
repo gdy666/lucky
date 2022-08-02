@@ -847,6 +847,7 @@
                                     <template #content>
                                         一行一条Header(key:value) <br />
                                         支持的变量 :<br />
+                                        #{time} : 触发Webhook的时间 <br />
                                         #{ipAddr} : 当前公网IP <br />
                                         #{successDomains} : 更新/添加成功的域名列表<br />
                                         #{failedDomains} : 更新/添加失败的域名列表<br />
@@ -865,6 +866,7 @@
 
                                 <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
                                     <template #content>支持的变量<br />
+                                        #{time} : 触发Webhook的时间 <br />
                                         #{ipAddr} : 当前公网IP<br />
                                         #{successDomains} : 更新/添加成功的域名列表<br />
                                         #{failedDomains} : 更新/添加失败的域名列表</template>
@@ -1305,7 +1307,7 @@ const WebhookServerSelectChange = (server : string)=>{
                 msgtype:"markdown",
                 markdown:{
                     title:"你的公网IP变了",
-                    text:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}'
+                    text:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}\n - Webhook触发时间:#{time}'
                 },
                 }
             WebhookServerListArea.value = JSON.stringify(dingding_msg,null,2);
@@ -1321,6 +1323,7 @@ const WebhookServerSelectChange = (server : string)=>{
                                 [{tag:"text",text:"IP地址：#{ipAddr}"}],
                                 [{tag:"text",text:"域名更新成功列表：#{successDomains}"}],
                                 [{tag:"text",text:"域名更新失败列表：#{failedDomains}"}],
+                                [{tag:"text",text:"Webhook触发时间: #{time}"}],
                                 ]
                         }
                     }
@@ -1332,7 +1335,7 @@ const WebhookServerSelectChange = (server : string)=>{
             let weixin_msg = {
                 msgtype:"markdown",
                 markdown:{
-                    content:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}'
+                    content:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}\n - Webhook触发时间:#{time}'
                 }
             }
             WebhookServerListArea.value= JSON.stringify(weixin_msg,null,2)

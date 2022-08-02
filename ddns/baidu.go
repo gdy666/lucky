@@ -96,6 +96,9 @@ func (baidu *BaiduCloud) createUpdateDomain(recordType, ipAddr string, domain *c
 
 	err := baidu.request("POST", baiduEndpoint+"/v1/domain/resolve/list", requestBody, &records)
 	if err != nil {
+		errMsg := "更新失败[001]:\n"
+		errMsg += err.Error()
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 

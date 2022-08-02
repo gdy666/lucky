@@ -58,6 +58,9 @@ func (dnspod *Dnspod) Init(task *config.DDNSTask) {
 func (dnspod *Dnspod) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
 	result, err := dnspod.getRecordList(domain, recordType)
 	if err != nil {
+		errMsg := "更新失败[001]:\n"
+		errMsg += err.Error()
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 

@@ -78,6 +78,9 @@ func (hw *Huaweicloud) createUpdateDomain(recordType, ipAddr string, domain *con
 	)
 
 	if err != nil {
+		errMsg := "更新失败[001]:\n"
+		errMsg += err.Error()
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 

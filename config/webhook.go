@@ -27,13 +27,15 @@ func (d *DDNSTask) ExecWebhook(domains *DomainsState) {
 
 		//log.Printf("DDNS任务【%s】触发Webhook", d.TaskName)
 
-		url := replaceWebhookPara(domains, d.WebhookURL)
-		requestBody := replaceWebhookPara(domains, d.WebhookRequestBody)
+		nowTime := time.Now().Format("2006-01-02 15:04:05")
+
+		url := replaceWebhookPara(domains, nowTime, d.WebhookURL)
+		requestBody := replaceWebhookPara(domains, nowTime, d.WebhookRequestBody)
 
 		//headersStr := cb.task.DNS.Callback.Headers
 		var headerStrList []string
 		for i := range d.WebhookHeaders {
-			header := replaceWebhookPara(domains, d.WebhookHeaders[i])
+			header := replaceWebhookPara(domains, nowTime, d.WebhookHeaders[i])
 			headerStrList = append(headerStrList, header)
 		}
 
@@ -41,7 +43,7 @@ func (d *DDNSTask) ExecWebhook(domains *DomainsState) {
 
 		succcssCotentList := []string{}
 		for i := range d.WebhookSuccessContent {
-			content := replaceWebhookPara(domains, d.WebhookSuccessContent[i])
+			content := replaceWebhookPara(domains, nowTime, d.WebhookSuccessContent[i])
 			succcssCotentList = append(succcssCotentList, content)
 		}
 
@@ -60,13 +62,14 @@ func (d *DDNSTask) ExecWebhook(domains *DomainsState) {
 }
 
 func WebhookTest(d *DDNSTask, url, method, WebhookRequestBody, proxy, addr, user, passwd string, headerList, successContentListraw []string) (string, error) {
-	url = replaceWebhookTestPara(url)
-	requestBody := replaceWebhookTestPara(WebhookRequestBody)
+	nowTime := time.Now().Format("2006-01-02 15:04:05")
+	url = replaceWebhookTestPara(url, nowTime)
+	requestBody := replaceWebhookTestPara(WebhookRequestBody, nowTime)
 
 	//headersStr := cb.task.DNS.Callback.Headers
 	var headerStrList []string
 	for i := range headerList {
-		header := replaceWebhookTestPara(headerList[i])
+		header := replaceWebhookTestPara(headerList[i], nowTime)
 		headerStrList = append(headerStrList, header)
 	}
 
@@ -74,7 +77,7 @@ func WebhookTest(d *DDNSTask, url, method, WebhookRequestBody, proxy, addr, user
 
 	succcssCotentList := []string{}
 	for i := range successContentListraw {
-		content := replaceWebhookTestPara(successContentListraw[i])
+		content := replaceWebhookTestPara(successContentListraw[i], nowTime)
 		succcssCotentList = append(succcssCotentList, content)
 	}
 
@@ -200,15 +203,16 @@ func hasDomainTryToUpdate(domains []*Domain) bool {
 }
 
 // replaceWebhookTestPara WebhookTest替换参数  #{successDomains},#{failedDomains}
-func replaceWebhookTestPara(orgPara string) (newPara string) {
+func replaceWebhookTestPara(orgPara, nowTime string) (newPara string) {
 	orgPara = strings.ReplaceAll(orgPara, "#{ipAddr}", "66.66.66.66")
 	orgPara = strings.ReplaceAll(orgPara, "#{successDomains}", "baidu.com,google.com")
 	orgPara = strings.ReplaceAll(orgPara, "#{failedDomains}", "weibo.com,github.com")
+	orgPara = strings.ReplaceAll(orgPara, "#{time}", nowTime)
 	return orgPara
 }
 
 // replacePara 替换参数  #{successDomains},#{failedDomains}
-func replaceWebhookPara(d *DomainsState, orgPara string) (newPara string) {
+func replaceWebhookPara(d *DomainsState, nowTime, orgPara string) (newPara string) {
 	ipAddrText := d.IpAddr
 	if ipAddrText == "" {
 		ipAddrText = "获取IP失败"
@@ -217,6 +221,7 @@ func replaceWebhookPara(d *DomainsState, orgPara string) (newPara string) {
 	successDomains, failedDomains := getDomainsStr(d.Domains)
 	orgPara = strings.ReplaceAll(orgPara, "#{successDomains}", successDomains)
 	orgPara = strings.ReplaceAll(orgPara, "#{failedDomains}", failedDomains)
+	orgPara = strings.ReplaceAll(orgPara, "#{time}", nowTime)
 	return orgPara
 }
 
@@ -233,10 +238,12 @@ func getDomainsStr(domains []*Domain) (string, string) {
 			continue
 		}
 
-		if successDomainBuf.Len() > 0 {
-			successDomainBuf.WriteString(",")
+		if v46.UpdateStatus == UpdatedNothing || v46.UpdateStatus == UpdatedSuccess {
+			if successDomainBuf.Len() > 0 {
+				successDomainBuf.WriteString(",")
+			}
+			successDomainBuf.WriteString(v46.String())
 		}
-		successDomainBuf.WriteString(v46.String())
 	}
 
 	return successDomainBuf.String(), failedDomainsBuf.String()

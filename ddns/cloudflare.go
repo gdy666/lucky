@@ -76,6 +76,13 @@ func (cf *Cloudflare) Init(task *config.DDNSTask) {
 func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
 	result, err := cf.getZones(domain)
 	if err != nil || len(result.Result) != 1 {
+		errMsg := "更新失败[001]:\n"
+		if err != nil {
+			errMsg += err.Error()
+		} else {
+			errMsg += fmt.Sprintf("%v", result)
+		}
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 	zoneID := result.Result[0].ID
@@ -90,6 +97,11 @@ func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *conf
 	)
 
 	if err != nil || !records.Success {
+		errMsg := "更新失败[002]:\n"
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
 		return
 	}
 
