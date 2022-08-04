@@ -38,11 +38,12 @@ func (d *DNSCommon) AddUpdateDomainRecords() string {
 
 func (d *DNSCommon) addUpdateDomainRecords(recordType string) string {
 	ipAddr, change, domains := d.task.DomainsState.CheckIPChange(recordType, d.task.TaskKey, d.task.GetIpAddr)
-
 	d.task.DomainsState.SetIPAddr(ipAddr)
+	//及时刷新IP地址显示
+	config.DDNSTaskListFlushDomainsDetails(d.task.TaskKey, &d.task.DomainsState)
 
 	if ipAddr == "" {
-		d.task.DomainsState.SetDomainUpdateStatus(config.UpdatedFailed, "获取公网IP失败")
+		d.task.DomainsState.SetDomainUpdateStatus(config.UpdatePause, "获取公网IP失败")
 		return ipAddr
 	}
 
@@ -88,9 +89,14 @@ sync:
 
 		if d.task.DNS.ResolverDoaminCheck {
 			domainResolverIPaddr, _ := ResolveDomainAtServerList(recordType, domain.String(), d.task.DNS.DNSServerList)
+			//log.Printf("domain:%s domainResolverIPaddr:%s ,ipaddr:%s", domain.String(), domainResolverIPaddr, ipAddr)
 
 			if domainResolverIPaddr == ipAddr {
-				domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+				if domain.UpdateStatus == config.UpdatedFailed {
+					domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+				} else {
+					domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+				}
 				continue
 			}
 		}

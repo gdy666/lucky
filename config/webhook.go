@@ -23,7 +23,7 @@ func (d *DDNSTask) ExecWebhook(domains *DomainsState) {
 
 	tryUpdate := hasDomainTryToUpdate(domains.Domains)
 
-	if d.WebhookURL != "" && tryUpdate {
+	if d.WebhookURL != "" && (tryUpdate || (domains.IpAddr == "" && d.WebhookCallOnGetIPfail)) {
 
 		//log.Printf("DDNS任务【%s】触发Webhook", d.TaskName)
 
@@ -65,6 +65,8 @@ func WebhookTest(d *DDNSTask, url, method, WebhookRequestBody, proxy, addr, user
 	nowTime := time.Now().Format("2006-01-02 15:04:05")
 	url = replaceWebhookTestPara(url, nowTime)
 	requestBody := replaceWebhookTestPara(WebhookRequestBody, nowTime)
+
+	//log.Printf("requestBody:\n%s", requestBody)
 
 	//headersStr := cb.task.DNS.Callback.Headers
 	var headerStrList []string
@@ -205,8 +207,15 @@ func hasDomainTryToUpdate(domains []*Domain) bool {
 // replaceWebhookTestPara WebhookTest替换参数  #{successDomains},#{failedDomains}
 func replaceWebhookTestPara(orgPara, nowTime string) (newPara string) {
 	orgPara = strings.ReplaceAll(orgPara, "#{ipAddr}", "66.66.66.66")
-	orgPara = strings.ReplaceAll(orgPara, "#{successDomains}", "baidu.com,google.com")
-	orgPara = strings.ReplaceAll(orgPara, "#{failedDomains}", "weibo.com,github.com")
+
+	successDomains := "www1.google.com,www2.google.com,www3.google.com,www4.google.com"
+	failedDomains := "www1.github.com,www2.github.com,www3.github.com,www4.github.com"
+	successDomainsLine := strings.Replace(successDomains, ",", `\n`, -1)
+	failedDomainsLine := strings.Replace(failedDomains, ",", `\n`, -1)
+	orgPara = strings.ReplaceAll(orgPara, "#{successDomains}", successDomains)
+	orgPara = strings.ReplaceAll(orgPara, "#{failedDomains}", failedDomains)
+	orgPara = strings.ReplaceAll(orgPara, "#{successDomainsLine}", successDomainsLine)
+	orgPara = strings.ReplaceAll(orgPara, "#{failedDomainsLine}", failedDomainsLine)
 	orgPara = strings.ReplaceAll(orgPara, "#{time}", nowTime)
 	return orgPara
 }
@@ -214,13 +223,23 @@ func replaceWebhookTestPara(orgPara, nowTime string) (newPara string) {
 // replacePara 替换参数  #{successDomains},#{failedDomains}
 func replaceWebhookPara(d *DomainsState, nowTime, orgPara string) (newPara string) {
 	ipAddrText := d.IpAddr
+
+	successDomains, failedDomains := getDomainsStr(d.Domains)
 	if ipAddrText == "" {
 		ipAddrText = "获取IP失败"
+		successDomains = ""
+		failedDomains = ""
 	}
+
+	successDomainsLine := strings.Replace(successDomains, ",", `\n`, -1)
+	failedDomainsLine := strings.Replace(failedDomains, ",", `\n`, -1)
+
 	orgPara = strings.ReplaceAll(orgPara, "#{ipAddr}", ipAddrText)
-	successDomains, failedDomains := getDomainsStr(d.Domains)
+
 	orgPara = strings.ReplaceAll(orgPara, "#{successDomains}", successDomains)
 	orgPara = strings.ReplaceAll(orgPara, "#{failedDomains}", failedDomains)
+	orgPara = strings.ReplaceAll(orgPara, "#{successDomainsLine}", successDomainsLine)
+	orgPara = strings.ReplaceAll(orgPara, "#{failedDomainsLine}", failedDomainsLine)
 	orgPara = strings.ReplaceAll(orgPara, "#{time}", nowTime)
 	return orgPara
 }

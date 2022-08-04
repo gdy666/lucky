@@ -15,7 +15,9 @@ const (
 	// UpdatedSuccess 更新成功
 	UpdatedSuccess = "成功"
 	// UpdateStop 暂停
-	UpdateStop = "暂停"
+	UpdateStop = "停止同步"
+	//UpdatePause 暂停 获取IP失败时暂停
+	UpdatePause = "暂停同步"
 	// UpdateWaiting
 	UpdateWaiting = "等待更新"
 )

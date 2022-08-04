@@ -34,6 +34,8 @@ func syncAllDomainsOnce(params ...any) {
 	config.CleanIPUrlAddrMap()
 	ddnsConf := config.GetDDNSConfigure()
 
+	taskBeginTime := time.Now()
+
 	for index := range ddnsTaskList {
 
 		task := ddnsTaskList[index]
@@ -60,8 +62,14 @@ func syncAllDomainsOnce(params ...any) {
 	}
 	wg.Wait()
 
+	taskEndTime := time.Now()
+
+	usedTime := taskEndTime.Sub(taskBeginTime)
+
+	nextTaskTimer := time.Second*time.Duration(ddnsConf.Intervals) - usedTime
+
 	//log.Printf("syncAllDomainsOnce 任务完成")
-	DDNSService.Timer = time.NewTimer(time.Second * time.Duration(ddnsConf.Intervals))
+	DDNSService.Timer = time.NewTimer(nextTaskTimer)
 }
 
 func syncTaskDomainsOnce(params ...any) {
@@ -71,6 +79,7 @@ func syncTaskDomainsOnce(params ...any) {
 	case "syncDDNSTask":
 		{
 			//log.Printf("syncTaskDomainsOnce 单DDNS任务更新：%s", taskKey)
+			config.CleanIPUrlAddrMap()
 			task := config.GetDDNSTaskByKey(taskKey)
 			syncDDNSTask(task)
 		}

@@ -825,8 +825,11 @@
                                 <el-tooltip class="box-item" effect="dark" content="">
                                     <template #content>支持的变量 <br />
                                         #{ipAddr} : 当前公网IP<br />
-                                        #{successDomains} : 更新/添加成功的域名列表<br />
-                                        #{failedDomains} : 更新/添加失败的域名列表</template>
+                                          #{time} : 触发Webhook的时间 <br />
+                                        #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
+                                        #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
+                                        #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
+                                        #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔</template>
                                     <el-form-item label="接口地址" label-width="auto">
                                         <el-input v-model="DDNSForm.WebhookURL" autocomplete="off" />
                                     </el-form-item>
@@ -849,8 +852,10 @@
                                         支持的变量 :<br />
                                         #{time} : 触发Webhook的时间 <br />
                                         #{ipAddr} : 当前公网IP <br />
-                                        #{successDomains} : 更新/添加成功的域名列表<br />
-                                        #{failedDomains} : 更新/添加失败的域名列表<br />
+                                        #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
+                                        #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
+                                        #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
+                                        #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔<br />
                                         如果需要使用BasicAuth,请使用下面两行Header设置BasicAuth的账号和密码<br />
                                         BasicAuthUserName:你的账号<br />
                                         BasicAuthPassword:你的密码</template>
@@ -868,8 +873,10 @@
                                     <template #content>支持的变量<br />
                                         #{time} : 触发Webhook的时间 <br />
                                         #{ipAddr} : 当前公网IP<br />
-                                        #{successDomains} : 更新/添加成功的域名列表<br />
-                                        #{failedDomains} : 更新/添加失败的域名列表</template>
+                                        #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
+                                        #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
+                                        #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
+                                        #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔</template>
                                     <el-form-item label="RequestBody" label-width="auto"
                                         v-show="DDNSForm.WebhookMethod == 'get' ? false : true">
                                         <el-input v-model="DDNSForm.WebhookRequestBody" type="textarea" rows="5"
@@ -884,8 +891,10 @@
                                         多种表示成功的不同字符串请分多行写<br />
                                         支持的变量 <br />
                                         #{ipAddr} : 当前公网IP<br />
-                                        #{successDomains} : 更新/添加成功的域名列表<br />
-                                        #{failedDomains} : 更新/添加失败的域名列表</template>
+                                        #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
+                                        #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
+                                        #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
+                                        #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔</template>
                                     <el-form-item label="接口调用成功包含的字符串" label-width="auto">
                                         <el-input v-model="DDNSFormWebhookSuccessContentArea"
                                             :autosize="{ minRows: 3, maxRows: 5 }" type="textarea" autocomplete="off"
@@ -1306,8 +1315,8 @@ const WebhookServerSelectChange = (server : string)=>{
             let dingding_msg = {
                 msgtype:"markdown",
                 markdown:{
-                    title:"你的公网IP变了",
-                    text:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}\n - Webhook触发时间:#{time}'
+                    title:"DDNS域名同步反馈",
+                    text:'#### DDNS域名同步反馈 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomainsLine}\n - 域名更新失败列表：#{failedDomainsLine}\n - Webhook触发时间:  \n  #{time}'
                 },
                 }
             WebhookServerListArea.value = JSON.stringify(dingding_msg,null,2);
@@ -1318,12 +1327,12 @@ const WebhookServerSelectChange = (server : string)=>{
                 content:{
                     post:{
                         zh_cn:{
-                            title:"你的公网IP变了",
+                            title:"DDNS域名同步反馈",
                             content:[
                                 [{tag:"text",text:"IP地址：#{ipAddr}"}],
-                                [{tag:"text",text:"域名更新成功列表：#{successDomains}"}],
-                                [{tag:"text",text:"域名更新失败列表：#{failedDomains}"}],
-                                [{tag:"text",text:"Webhook触发时间: #{time}"}],
+                                [{tag:"text",text:"域名更新成功列表：#{successDomainsLine}"}],
+                                [{tag:"text",text:"域名更新失败列表：#{successDomainsLine}"}],
+                                [{tag:"text",text:"Webhook触发时间: \n#{time}"}],
                                 ]
                         }
                     }
@@ -1335,7 +1344,7 @@ const WebhookServerSelectChange = (server : string)=>{
             let weixin_msg = {
                 msgtype:"markdown",
                 markdown:{
-                    content:'#### 你的公网IP变了 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomains}\n - 域名更新失败列表：#{failedDomains}\n - Webhook触发时间:#{time}'
+                    content:'#### DDNS域名同步反馈 \n##### IP地址：\n#{ipAddr} \n##### 域名更新成功列表：\n#{successDomainsLine}\n##### 域名更新失败列表：\n#{failedDomainsLine}\n##### Webhook触发时间: \n#{time}'
                 }
             }
             WebhookServerListArea.value= JSON.stringify(weixin_msg,null,2)
