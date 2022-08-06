@@ -94,6 +94,10 @@ func (cb *Callback) CallbackHttpClientDo(method, url, requestBody string, header
 	if err != nil {
 		return fmt.Errorf("Callback 调用接口[%s]出错：%s", url, err.Error())
 	}
+	// 用户未传任何的成功的任何字符串，那么认为无返回值就是接口调用成功的状态，而有信息则为失败
+	if callbackSuccessContent == nil && respStr == "" {
+	        return nil
+	}
 	//log.Printf("接口[%s]调用响应:%s\n", url, respStr)
 
 	for _, successContent := range callbackSuccessContent {
