@@ -32,8 +32,8 @@ type WebLog struct {
 
 func (wlog *WebLogs) Write(p []byte) (n int, err error) {
 	nowTime := time.Now()
-	tripContent := strings.TrimSpace(string(p)[20:])
-	content := fmt.Sprintf("%s %s", nowTime.Format("2006-01-02 15:04:05"), tripContent)
+	// tripContent := strings.TrimSpace(string(p)[20:])
+	// content := fmt.Sprintf("%s %s", nowTime.Format("2006-01-02 15:04:05"), tripContent)
 
 	if webLogs.preTimeStamp == nowTime.UnixNano() {
 		webLogs.timeStampIndex++
@@ -41,7 +41,7 @@ func (wlog *WebLogs) Write(p []byte) (n int, err error) {
 		webLogs.timeStampIndex = 0
 	}
 
-	l := WebLog{Timestamp: nowTime.UnixNano() + webLogs.timeStampIndex, Log: content}
+	l := WebLog{Timestamp: nowTime.UnixNano() + webLogs.timeStampIndex, Log: strings.TrimSpace(string(p))}
 
 	webLogsStore = append(webLogsStore, l)
 	webLogs.preTimeStamp = nowTime.UnixNano()

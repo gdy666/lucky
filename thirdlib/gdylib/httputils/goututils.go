@@ -10,8 +10,8 @@ import (
 	"github.com/guonaihong/gout/dataflow"
 )
 
-func NewGout(secureSkipVerify bool, proxyType, proxyUrl, user, passwd string, timeout time.Duration) (*dataflow.Gout, error) {
-	httpClient, err := CreateHttpClient(secureSkipVerify, proxyType, proxyUrl, user, passwd, timeout)
+func NewGout(transportNetwork, localAddr string, secureSkipVerify bool, proxyType, proxyUrl, user, passwd string, timeout time.Duration) (*dataflow.Gout, error) {
+	httpClient, err := CreateHttpClient(transportNetwork, localAddr, secureSkipVerify, proxyType, proxyUrl, user, passwd, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("CreateHttpClient error:%s", err.Error())
 	}
@@ -19,8 +19,16 @@ func NewGout(secureSkipVerify bool, proxyType, proxyUrl, user, passwd string, ti
 	return gout.New(httpClient), nil
 }
 
-func GetAndParseJSONResponseFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl, user, passwd string, headers map[string]string, secureSkipVerify bool, timeout time.Duration, result interface{}) error {
-	bytes, err := GetBytesFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl, user, passwd, headers, secureSkipVerify, timeout)
+func GetAndParseJSONResponseFromGoutDoHttpRequest(transportNetwork, localAddr, method, url, requestBody, proxyType, proxyUrl, user, passwd string,
+	headers map[string]string, secureSkipVerify bool, timeout time.Duration, result interface{}) error {
+	_, bytes, err := GetBytesFromGoutDoHttpRequest(
+		transportNetwork,
+		localAddr,
+		method,
+		url,
+		requestBody,
+		proxyType,
+		proxyUrl, user, passwd, headers, secureSkipVerify, timeout)
 	if err != nil {
 		return fmt.Errorf("GetBytesFromHttpResponse err:%s", err.Error())
 	}
@@ -33,23 +41,27 @@ func GetAndParseJSONResponseFromGoutDoHttpRequest(method, url, requestBody, prox
 	return nil
 }
 
-func GetStringGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl, user, passwd string, headers map[string]string, secureSkipVerify bool, timeout time.Duration) (string, error) {
-	bytes, err := GetBytesFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl, user, passwd, headers, secureSkipVerify, timeout)
+func GetStringGoutDoHttpRequest(transportNetwork, localAddr, method, url, requestBody, proxyType, proxyUrl, user, passwd string,
+	headers map[string]string, secureSkipVerify bool, timeout time.Duration) (int, string, error) {
+	statusCode, bytes, err := GetBytesFromGoutDoHttpRequest(transportNetwork, localAddr, method, url, requestBody, proxyType, proxyUrl, user, passwd, headers, secureSkipVerify, timeout)
 	if err != nil {
-		return "", err
+		return 0, "", err
 	}
-	return string(bytes), nil
+	return statusCode, string(bytes), nil
 }
 
-func GetBytesFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl, user, passwd string, headers map[string]string, secureSkipVerify bool, timeout time.Duration) ([]byte, error) {
+func GetBytesFromGoutDoHttpRequest(transportNetwork, localAddr, method, url, requestBody, proxyType, proxyUrl, user, passwd string,
+	headers map[string]string, secureSkipVerify bool, timeout time.Duration) (int, []byte, error) {
 	gout, err := NewGout(
+		transportNetwork,
+		localAddr,
 		secureSkipVerify,
 		proxyType,
 		proxyUrl,
 		user,
 		passwd, timeout)
 	if err != nil {
-		return []byte{}, fmt.Errorf("GoutDoHttpRequest err:%s", err.Error())
+		return 0, []byte{}, fmt.Errorf("GoutDoHttpRequest err:%s", err.Error())
 	}
 
 	switch strings.ToLower(method) {
@@ -62,7 +74,7 @@ func GetBytesFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl
 	case "delete":
 		gout.DELETE(url)
 	default:
-		return []byte{}, fmt.Errorf("未支持的Callback请求方法:%s", method)
+		return 0, []byte{}, fmt.Errorf("未支持的Callback请求方法:%s", method)
 	}
 
 	basicAuthUserName, BasicAuthUserNameOk := headers["BasicAuthUserName"]
@@ -86,9 +98,9 @@ func GetBytesFromGoutDoHttpRequest(method, url, requestBody, proxyType, proxyUrl
 
 	resp, err := gout.Response()
 	if err != nil {
-		return []byte{}, fmt.Errorf("gout.Response() error:%s", err.Error())
+		return 0, []byte{}, fmt.Errorf("gout.Response() error:%s", err.Error())
 	}
+	respByte, respErr := GetBytesFromHttpResponse(resp)
 
-	return GetBytesFromHttpResponse(resp)
-
+	return resp.StatusCode, respByte, respErr
 }

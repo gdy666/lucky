@@ -15,7 +15,7 @@ lucky
 *.out
 *.log
 *.upx
-
+lucky.conf
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

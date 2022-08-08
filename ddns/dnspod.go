@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 )
 
@@ -43,7 +43,7 @@ type DnspodStatus struct {
 }
 
 // Init 初始化
-func (dnspod *Dnspod) Init(task *config.DDNSTask) {
+func (dnspod *Dnspod) Init(task *ddnscore.DDNSTaskInfo) {
 	dnspod.DNSCommon.Init(task)
 
 	if task.TTL == "" {
@@ -55,12 +55,12 @@ func (dnspod *Dnspod) Init(task *config.DDNSTask) {
 	dnspod.SetCreateUpdateDomainFunc(dnspod.createUpdateDomain)
 }
 
-func (dnspod *Dnspod) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
+func (dnspod *Dnspod) createUpdateDomain(recordType, ipAddr string, domain *ddnscore.Domain) {
 	result, err := dnspod.getRecordList(domain, recordType)
 	if err != nil {
 		errMsg := "更新失败[001]:\n"
 		errMsg += err.Error()
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		return
 	}
 
@@ -74,70 +74,77 @@ func (dnspod *Dnspod) createUpdateDomain(recordType, ipAddr string, domain *conf
 }
 
 // 创建
-func (dnspod *Dnspod) create(result DnspodRecordListResp, domain *config.Domain, recordType string, ipAddr string) {
-	status, err := dnspod.commonRequest(
-		recordCreateAPI,
-		url.Values{
-			"login_token": {dnspod.task.DNS.ID + "," + dnspod.task.DNS.Secret},
-			"domain":      {domain.DomainName},
-			"sub_domain":  {domain.GetSubDomain()},
-			"record_type": {recordType},
-			"record_line": {"默认"},
-			"value":       {ipAddr},
-			"ttl":         {dnspod.TTL},
-			"format":      {"json"},
-		},
-		domain,
-	)
+func (dnspod *Dnspod) create(result DnspodRecordListResp, domain *ddnscore.Domain, recordType string, ipAddr string) {
+	params := domain.GetCustomParams()
+	params.Add("login_token", dnspod.task.DNS.ID+","+dnspod.task.DNS.Secret)
+	params.Add("domain", domain.DomainName)
+	params.Add("sub_domain", domain.GetSubDomain())
+	params.Add("record_type", recordType)
+	params.Add("value", ipAddr)
+	params.Add("ttl", dnspod.TTL)
+	params.Add("format", "json")
+
+	if !params.Has("record_line") {
+		params.Add("record_line", "默认")
+	}
+
+	status, err := dnspod.commonRequest(recordCreateAPI, params, domain)
 	if err == nil && status.Status.Code == "1" {
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("新增域名解析 %s 失败！Code: %s, Message: %s", domain, status.Status.Code, status.Status.Message)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
 	}
 }
 
 // 修改
-func (dnspod *Dnspod) modify(result DnspodRecordListResp, domain *config.Domain, recordType string, ipAddr string) {
+func (dnspod *Dnspod) modify(result DnspodRecordListResp, domain *ddnscore.Domain, recordType string, ipAddr string) {
 	for _, record := range result.Records {
 		// 相同不修改
 		if record.Value == ipAddr {
-			//log.Printf("你的IP %s 没有变化, 域名 %s", ipAddr, domain)
-			domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+			if domain.UpdateStatus == ddnscore.UpdatedFailed {
+				domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
+			} else {
+				domain.SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
+			}
 			continue
 		}
-		status, err := dnspod.commonRequest(
-			recordModifyURL,
-			url.Values{
-				"login_token": {dnspod.task.DNS.ID + "," + dnspod.task.DNS.Secret},
-				"domain":      {domain.DomainName},
-				"sub_domain":  {domain.GetSubDomain()},
-				"record_type": {recordType},
-				"record_line": {"默认"},
-				"record_id":   {record.ID},
-				"value":       {ipAddr},
-				"ttl":         {dnspod.TTL},
-				"format":      {"json"},
-			},
-			domain,
-		)
+		params := domain.GetCustomParams()
+		params.Add("login_token", dnspod.task.DNS.ID+","+dnspod.task.DNS.Secret)
+		params.Add("domain", domain.DomainName)
+		params.Add("sub_domain", domain.GetSubDomain())
+		params.Add("record_type", recordType)
+		params.Add("value", ipAddr)
+		params.Add("ttl", dnspod.TTL)
+		params.Add("format", "json")
+		params.Add("record_id", record.ID)
+
+		if !params.Has("record_line") {
+			params.Add("record_line", "默认")
+		}
+		status, err := dnspod.commonRequest(recordModifyURL, params, domain)
 		if err == nil && status.Status.Code == "1" {
 			//log.Printf("更新域名解析 %s 成功！IP: %s", domain, ipAddr)
-			domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 		} else {
 			//log.Printf("更新域名解析 %s 失败！Code: %s, Message: %s", domain, status.Status.Code, status.Status.Message)
-			domain.SetDomainUpdateStatus(config.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
 		}
 	}
 }
 
 // 公共
-func (dnspod *Dnspod) commonRequest(apiAddr string, values url.Values, domain *config.Domain) (status DnspodStatus, err error) {
-	resp, err := http.PostForm(
+func (dnspod *Dnspod) commonRequest(apiAddr string, values url.Values, domain *ddnscore.Domain) (status DnspodStatus, err error) {
+	resp, e := http.PostForm(
 		apiAddr,
 		values,
 	)
+
+	if err != nil {
+		err = e
+		return
+	}
 
 	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, &status)
 
@@ -145,14 +152,13 @@ func (dnspod *Dnspod) commonRequest(apiAddr string, values url.Values, domain *c
 }
 
 // 获得域名记录列表
-func (dnspod *Dnspod) getRecordList(domain *config.Domain, typ string) (result DnspodRecordListResp, err error) {
-	values := url.Values{
-		"login_token": {dnspod.task.DNS.ID + "," + dnspod.task.DNS.Secret},
-		"domain":      {domain.DomainName},
-		"record_type": {typ},
-		"sub_domain":  {domain.GetSubDomain()},
-		"format":      {"json"},
-	}
+func (dnspod *Dnspod) getRecordList(domain *ddnscore.Domain, typ string) (result DnspodRecordListResp, err error) {
+	params := domain.GetCustomParams()
+	params.Add("login_token", dnspod.task.DNS.ID+","+dnspod.task.DNS.Secret)
+	params.Add("domain", domain.DomainName)
+	params.Add("record_type", typ)
+	params.Add("sub_domain", domain.GetSubDomain())
+	params.Add("format", "json")
 
 	client, e := dnspod.CreateHTTPClient()
 	if e != nil {
@@ -162,9 +168,15 @@ func (dnspod *Dnspod) getRecordList(domain *config.Domain, typ string) (result D
 
 	resp, err := client.PostForm(
 		recordListAPI,
-		values,
+		params,
 	)
 
+	if err != nil {
+		err = e
+		return
+	}
+
 	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
+
 	return
 }

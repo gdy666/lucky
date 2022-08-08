@@ -2,10 +2,12 @@ package ddns
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 )
 
@@ -15,7 +17,7 @@ type Callback struct {
 }
 
 // Init 初始化
-func (cb *Callback) Init(task *config.DDNSTask) {
+func (cb *Callback) Init(task *ddnscore.DDNSTaskInfo) {
 	cb.DNSCommon.Init(task)
 
 	if task.TTL == "" {
@@ -37,7 +39,7 @@ func CopyHeadersMap(sm map[string]string) map[string]string {
 	return dm
 }
 
-func (cb *Callback) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
+func (cb *Callback) createUpdateDomain(recordType, ipAddr string, domain *ddnscore.Domain) {
 
 	url := replacePara(cb.task.DNS.Callback.URL, ipAddr, domain, recordType, cb.TTL)
 	requestBody := replacePara(cb.task.DNS.Callback.RequestBody, ipAddr, domain, recordType, cb.TTL)
@@ -60,18 +62,24 @@ func (cb *Callback) createUpdateDomain(recordType, ipAddr string, domain *config
 	callErr := cb.CallbackHttpClientDo(cb.task.DNS.Callback.Method, url, requestBody, headers, succcssCotentList)
 
 	if callErr != nil {
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, callErr.Error())
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, callErr.Error())
 		return
 	}
-	domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+	domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 }
 
 // replacePara 替换参数
-func replacePara(orgPara, ipAddr string, domain *config.Domain, recordType string, ttl string) (newPara string) {
+func replacePara(orgPara, ipAddr string, domain *ddnscore.Domain, recordType string, ttl string) (newPara string) {
 	orgPara = strings.ReplaceAll(orgPara, "#{ip}", ipAddr)
 	orgPara = strings.ReplaceAll(orgPara, "#{domain}", domain.String())
 	orgPara = strings.ReplaceAll(orgPara, "#{recordType}", recordType)
 	orgPara = strings.ReplaceAll(orgPara, "#{ttl}", ttl)
+
+	for k, v := range domain.GetCustomParams() {
+		if len(v) == 1 {
+			orgPara = strings.ReplaceAll(orgPara, "#{"+k+"}", v[0])
+		}
+	}
 
 	return orgPara
 }
@@ -80,7 +88,9 @@ func (cb *Callback) CallbackHttpClientDo(method, url, requestBody string, header
 
 	globalDDNSConf := config.GetDDNSConfigure()
 	dnsConf := cb.task.DNS
-	respStr, err := httputils.GetStringGoutDoHttpRequest(
+	statusCode, respStr, err := httputils.GetStringGoutDoHttpRequest(
+		"tcp",
+		"",
 		method,
 		url,
 		requestBody,
@@ -94,7 +104,17 @@ func (cb *Callback) CallbackHttpClientDo(method, url, requestBody string, header
 	if err != nil {
 		return fmt.Errorf("Callback 调用接口[%s]出错：%s", url, err.Error())
 	}
+
+	if cb.task.DNS.Callback.DisableCallbackSuccessContentCheck {
+		if statusCode == http.StatusOK {
+			return nil
+		}
+		return fmt.Errorf("调用接口失败:\n statusCode:%d\n%s", statusCode, respStr)
+	}
+
 	//log.Printf("接口[%s]调用响应:%s\n", url, respStr)
+
+	//fmt.Printf("statusCode:%d\n", statusCode)
 
 	for _, successContent := range callbackSuccessContent {
 		if strings.Contains(respStr, successContent) {

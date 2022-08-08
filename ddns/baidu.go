@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 	"github.com/gdy666/lucky/thirdlib/jeessy2/ddns-go/util"
 )
@@ -68,7 +68,7 @@ type BaiduCreateRequest struct {
 	ZoneName string `json:"zoneName"`
 }
 
-func (baidu *BaiduCloud) Init(task *config.DDNSTask) {
+func (baidu *BaiduCloud) Init(task *ddnscore.DDNSTaskInfo) {
 	baidu.DNSCommon.Init(task)
 
 	if task.TTL == "" {
@@ -85,7 +85,7 @@ func (baidu *BaiduCloud) Init(task *config.DDNSTask) {
 	baidu.SetCreateUpdateDomainFunc(baidu.createUpdateDomain)
 }
 
-func (baidu *BaiduCloud) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
+func (baidu *BaiduCloud) createUpdateDomain(recordType, ipAddr string, domain *ddnscore.Domain) {
 	var records BaiduRecordsResp
 
 	requestBody := BaiduListRequest{
@@ -98,7 +98,7 @@ func (baidu *BaiduCloud) createUpdateDomain(recordType, ipAddr string, domain *c
 	if err != nil {
 		errMsg := "更新失败[001]:\n"
 		errMsg += err.Error()
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		return
 	}
 
@@ -117,8 +117,8 @@ func (baidu *BaiduCloud) createUpdateDomain(recordType, ipAddr string, domain *c
 	}
 }
 
-//create 创建新的解析
-func (baidu *BaiduCloud) create(domain *config.Domain, recordType string, ipAddr string) {
+// create 创建新的解析
+func (baidu *BaiduCloud) create(domain *ddnscore.Domain, recordType string, ipAddr string) {
 	var baiduCreateRequest = BaiduCreateRequest{
 		Domain:   domain.GetSubDomain(), //处理一下@
 		RdType:   recordType,
@@ -131,19 +131,22 @@ func (baidu *BaiduCloud) create(domain *config.Domain, recordType string, ipAddr
 	err := baidu.request("POST", baiduEndpoint+"/v1/domain/resolve/add", baiduCreateRequest, &result)
 	if err == nil {
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("新增域名解析 %s 失败！", domain)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, err.Error())
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
 	}
 }
 
-//modify 更新解析
-func (baidu *BaiduCloud) modify(record BaiduRecord, domain *config.Domain, rdType string, ipAddr string) {
+// modify 更新解析
+func (baidu *BaiduCloud) modify(record BaiduRecord, domain *ddnscore.Domain, rdType string, ipAddr string) {
 	//没有变化直接跳过
 	if record.Rdata == ipAddr {
-		//log.Printf("你的IP %s 没有变化, 域名 %s", ipAddr, domain)
-		domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+		if domain.UpdateStatus == ddnscore.UpdatedFailed {
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
+		} else {
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
+		}
 		return
 	}
 	var baiduModifyRequest = BaiduModifyRequest{
@@ -160,10 +163,10 @@ func (baidu *BaiduCloud) modify(record BaiduRecord, domain *config.Domain, rdTyp
 	err := baidu.request("POST", baiduEndpoint+"/v1/domain/resolve/edit", baiduModifyRequest, &result)
 	if err == nil {
 		//log.Printf("更新域名解析 %s 成功！IP: %s", domain, ipAddr)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("更新域名解析 %s 失败！", domain)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, err.Error())
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
 	}
 }
 
@@ -193,7 +196,9 @@ func (baidu *BaiduCloud) request(method string, url string, data interface{}, re
 	}
 
 	resp, err := client.Do(req)
-	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
+	if err != nil {
+		return err
+	}
 
-	return
+	return httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
 }

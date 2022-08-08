@@ -6,8 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -25,6 +25,7 @@ import (
 
 	"github.com/gdy666/lucky/base"
 	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/rule"
 	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/ginutils"
@@ -212,7 +213,7 @@ func restoreConfigure(c *gin.Context) {
 	}
 	defer src.Close()
 
-	fileBytes, err := ioutil.ReadAll(src)
+	fileBytes, err := io.ReadAll(src)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("ioutil.ReadAll err:%s", err.Error())})
 		return
@@ -253,12 +254,12 @@ func enableddns(c *gin.Context) {
 	var err error
 
 	if enable == "true" {
-		err = config.EnableDDNSTaskByKey(key, true)
+		err = ddnscore.EnableDDNSTaskByKey(key, true)
 		if err == nil {
 			service.Message("ddns", "syncDDNSTask", key)
 		}
 	} else {
-		err = config.EnableDDNSTaskByKey(key, false)
+		err = ddnscore.EnableDDNSTaskByKey(key, false)
 	}
 
 	if err != nil {
@@ -277,6 +278,8 @@ func deleteDDNSTask(c *gin.Context) {
 		return
 	}
 
+	ddnscore.DDNSTaskInfoMapDelete(taskKey)
+
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
 }
 
@@ -289,7 +292,8 @@ func ddnsTaskList(c *gin.Context) {
 		return
 	}
 
-	taskList := config.GetDDNSTaskList()
+	taskList := ddnscore.GetDDNSTaskInfoList()
+	ddnscore.FLushWebLastAccessDDNSTaskListLastTime()
 
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": taskList})
 }
@@ -346,6 +350,8 @@ func alterDDNSTask(c *gin.Context) {
 		return
 	}
 
+	ddnscore.DDNSTaskInfoMapDelete(taskKey)
+
 	if requestObj.Enable {
 		service.Message("ddns", "syncDDNSTask", taskKey)
 	}
@@ -395,6 +401,12 @@ func dealRequestDDNSTask(t *config.DDNSTask) {
 
 	if t.GetType == "netInterface" {
 		t.URL = []string{}
+	}
+
+	if t.DNS.Name == "callback" {
+		if t.DNS.Callback.DisableCallbackSuccessContentCheck {
+			t.DNS.Callback.CallbackSuccessContent = []string{}
+		}
 	}
 
 	if !t.WebhookEnable {
@@ -528,7 +540,7 @@ func whilelistAdd(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": fmt.Sprintf("IP已记录进白名单"), "ip": c.ClientIP(), " effective_time": lifeTime})
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": "IP已记录进白名单", "ip": c.ClientIP(), " effective_time": lifeTime})
 }
 
 func whitelistConfigure(c *gin.Context) {
@@ -556,7 +568,6 @@ func alterWhitelistConfigure(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ret": 0})
-	return
 }
 
 func checkLocalIP(c *gin.Context) {
@@ -729,7 +740,7 @@ func baseconfigure(c *gin.Context) {
 }
 
 func netinterfaces(c *gin.Context) {
-	ipv4NetInterfaces, ipv6Netinterfaces, err := config.GetNetInterface()
+	ipv4NetInterfaces, ipv6Netinterfaces, err := ddnscore.GetNetInterface()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("获取网卡列表出错：%s", err.Error())})
 		return
@@ -764,16 +775,16 @@ func webhookTest(c *gin.Context) {
 		return
 	}
 
-	responseStr, err := config.WebhookTest(&ddnsTask.DDNSTask,
-		request.WebhookURL,
-		request.WebhookMethod,
-		request.WebhookRequestBody,
-		request.WebhookProxy,
-		request.WebhookProxyAddr,
-		request.WebhookProxyUser,
-		request.WebhookProxyPassword,
-		request.WebhookHeaders,
-		request.WebhookSuccessContent)
+	// responseStr, err := config.WebhookTest(&ddnsTask.DDNSTask,
+	// 	request.WebhookURL,
+	// 	request.WebhookMethod,
+	// 	request.WebhookRequestBody,
+	// 	request.WebhookProxy,
+	// 	request.WebhookProxyAddr,
+	// 	request.WebhookProxyUser,
+	// 	request.WebhookProxyPassword,
+	// 	request.WebhookHeaders,
+	// 	request.WebhookSuccessContent)
 
 	//fmt.Printf("request:%s\n", request)
 
@@ -782,7 +793,7 @@ func webhookTest(c *gin.Context) {
 		msg = err.Error()
 	}
 
-	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": msg, "Response": responseStr})
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": msg, "Response": "responseStr"})
 }
 
 func IPRegTest(c *gin.Context) {
@@ -790,7 +801,7 @@ func IPRegTest(c *gin.Context) {
 	netinterface := c.Query("netinterface")
 	ipreg := c.Query("ipreg")
 
-	ip := config.GetIPFromNetInterface(iptype, netinterface, ipreg)
+	ip := ddnscore.GetIPFromNetInterface(iptype, netinterface, ipreg)
 
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "ip": ip})
 }
@@ -1067,7 +1078,7 @@ func GetCpuPercent() float64 {
 	return percent[0]
 }
 
-//跨域访问：cross  origin resource share
+// 跨域访问：cross  origin resource share
 func CrosHandler() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		method := context.Request.Method

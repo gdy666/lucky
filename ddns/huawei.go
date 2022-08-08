@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 	"github.com/gdy666/lucky/thirdlib/jeessy2/ddns-go/util"
 )
@@ -50,7 +50,7 @@ type HuaweicloudRecordsets struct {
 }
 
 // Init 初始化
-func (hw *Huaweicloud) Init(task *config.DDNSTask) {
+func (hw *Huaweicloud) Init(task *ddnscore.DDNSTaskInfo) {
 	hw.DNSCommon.Init(task)
 
 	if task.TTL == "" {
@@ -67,7 +67,7 @@ func (hw *Huaweicloud) Init(task *config.DDNSTask) {
 	hw.SetCreateUpdateDomainFunc(hw.createUpdateDomain)
 }
 
-func (hw *Huaweicloud) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
+func (hw *Huaweicloud) createUpdateDomain(recordType, ipAddr string, domain *ddnscore.Domain) {
 	var records HuaweicloudRecordsResp
 
 	err := hw.request(
@@ -80,7 +80,7 @@ func (hw *Huaweicloud) createUpdateDomain(recordType, ipAddr string, domain *con
 	if err != nil {
 		errMsg := "更新失败[001]:\n"
 		errMsg += err.Error()
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		return
 	}
 
@@ -102,7 +102,7 @@ func (hw *Huaweicloud) createUpdateDomain(recordType, ipAddr string, domain *con
 }
 
 // 创建
-func (hw *Huaweicloud) create(domain *config.Domain, recordType string, ipAddr string) {
+func (hw *Huaweicloud) create(domain *ddnscore.Domain, recordType string, ipAddr string) {
 	zone, err := hw.getZones(domain)
 	if err != nil {
 		return
@@ -135,20 +135,23 @@ func (hw *Huaweicloud) create(domain *config.Domain, recordType string, ipAddr s
 	)
 	if err == nil && (len(result.Records) > 0 && result.Records[0] == ipAddr) {
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("新增域名解析 %s 失败！Status: %s", domain, result.Status)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, result.Status)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, result.Status)
 	}
 }
 
 // 修改
-func (hw *Huaweicloud) modify(record HuaweicloudRecordsets, domain *config.Domain, recordType string, ipAddr string) {
+func (hw *Huaweicloud) modify(record HuaweicloudRecordsets, domain *ddnscore.Domain, recordType string, ipAddr string) {
 
 	// 相同不修改
 	if len(record.Records) > 0 && record.Records[0] == ipAddr {
-		//log.Printf("你的IP %s 没有变化, 域名 %s", ipAddr, domain)
-		domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+		if domain.UpdateStatus == ddnscore.UpdatedFailed {
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
+		} else {
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
+		}
 		return
 	}
 
@@ -167,15 +170,15 @@ func (hw *Huaweicloud) modify(record HuaweicloudRecordsets, domain *config.Domai
 
 	if err == nil && (len(result.Records) > 0 && result.Records[0] == ipAddr) {
 		//log.Printf("更新域名解析 %s 成功！IP: %s, 状态: %s", domain, ipAddr, result.Status)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("更新域名解析 %s 失败！Status: %s", domain, result.Status)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, result.Status)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, result.Status)
 	}
 }
 
 // 获得域名记录列表
-func (hw *Huaweicloud) getZones(domain *config.Domain) (result HuaweicloudZonesResp, err error) {
+func (hw *Huaweicloud) getZones(domain *ddnscore.Domain) (result HuaweicloudZonesResp, err error) {
 	err = hw.request(
 		"GET",
 		fmt.Sprintf(huaweicloudEndpoint+"/v2/zones?name=%s", domain.DomainName),
@@ -218,7 +221,8 @@ func (hw *Huaweicloud) request(method string, url string, data interface{}, resu
 	}
 
 	resp, err := client.Do(req)
-	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
-
-	return
+	if err != nil {
+		return err
+	}
+	return httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
 }

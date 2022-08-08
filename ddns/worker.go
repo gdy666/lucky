@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/service"
 )
 
@@ -30,19 +31,29 @@ var wg sync.WaitGroup
 
 // RunOnce RunOnce
 func syncAllDomainsOnce(params ...any) {
-	ddnsTaskList := config.GetDDNSTaskList()
-	config.CleanIPUrlAddrMap()
+	ddnsTaskList := ddnscore.GetDDNSTaskInfoList()
+	ddnscore.CleanIPUrlAddrMap()
 	ddnsConf := config.GetDDNSConfigure()
 
+	//log.Printf("批量执行DDNS任务")
 	taskBeginTime := time.Now()
+
+	//fmt.Printf("ddnsTaskList:%v\n", ddnsTaskList)
 
 	for index := range ddnsTaskList {
 
 		task := ddnsTaskList[index]
 		if !task.Enable {
-			config.UpdateDomainsStateByTaskKey(task.TaskKey, config.UpdateStop, "")
 			continue
 		}
+
+		if time.Since(task.TaskState.LastWorkTime) < time.Second*15 {
+			//log.Printf("[%s]太接近,忽略", task.TaskName)
+			continue
+		}
+
+		//log.Printf("task[%s] enable\n", task.TaskName)
+
 		wg.Add(1)
 
 		go func() {
@@ -55,10 +66,10 @@ func syncAllDomainsOnce(params ...any) {
 				log.Printf("syncDDNSTask[%s]panic:\n%v", task.TaskName, recoverErr)
 				log.Printf("%s", debug.Stack())
 			}()
-			syncDDNSTask(&task)
+			syncDDNSTask(task)
 		}()
 
-		<-time.After(time.Second)
+		<-time.After(time.Millisecond * 600)
 	}
 	wg.Wait()
 
@@ -68,6 +79,7 @@ func syncAllDomainsOnce(params ...any) {
 
 	nextTaskTimer := time.Second*time.Duration(ddnsConf.Intervals) - usedTime
 
+	//debug.FreeOSMemory()
 	//log.Printf("syncAllDomainsOnce 任务完成")
 	DDNSService.Timer = time.NewTimer(nextTaskTimer)
 }
@@ -79,8 +91,8 @@ func syncTaskDomainsOnce(params ...any) {
 	case "syncDDNSTask":
 		{
 			//log.Printf("syncTaskDomainsOnce 单DDNS任务更新：%s", taskKey)
-			config.CleanIPUrlAddrMap()
-			task := config.GetDDNSTaskByKey(taskKey)
+			ddnscore.CleanIPUrlAddrMap()
+			task := ddnscore.GetDDNSTaskInfoByKey(taskKey)
 			syncDDNSTask(task)
 		}
 	default:
@@ -89,7 +101,7 @@ func syncTaskDomainsOnce(params ...any) {
 
 }
 
-func syncDDNSTask(task *config.DDNSTaskDetails) {
+func syncDDNSTask(task *ddnscore.DDNSTaskInfo) {
 	if task == nil {
 		return
 	}
@@ -107,15 +119,18 @@ func syncDDNSTask(task *config.DDNSTaskDetails) {
 		dnsSelected = &Callback{}
 	case "baiducloud":
 		dnsSelected = &BaiduCloud{}
+	case "porkbun":
+		dnsSelected = &Porkbun{}
 	default:
 		return
 	}
 
-	dnsSelected.Init(&task.DDNSTask)
+	dnsSelected.Init(task)
+
 	dnsSelected.AddUpdateDomainRecords()
+	task.ExecWebhook(&task.TaskState)
+	ddnscore.DDNSTaskInfoMapUpdate(task)
+	task.TaskState.LastWorkTime = time.Now() //记录最近一次检测时间,防止批量检测和单个检测时间间隔过于接近
 
-	//task.DomainsState.IpAddr = ipaddr
-	task.ExecWebhook(&task.DomainsState)
-
-	config.DDNSTaskListFlushDomainsDetails(task.TaskKey, &task.DomainsState)
+	//
 }

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 )
 
@@ -56,7 +56,7 @@ type CloudflareStatus struct {
 }
 
 // Init 初始化
-func (cf *Cloudflare) Init(task *config.DDNSTask) {
+func (cf *Cloudflare) Init(task *ddnscore.DDNSTaskInfo) {
 	cf.DNSCommon.Init(task)
 
 	if task.TTL == "" {
@@ -73,7 +73,7 @@ func (cf *Cloudflare) Init(task *config.DDNSTask) {
 	cf.SetCreateUpdateDomainFunc(cf.createUpdateDomain)
 }
 
-func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *config.Domain) {
+func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *ddnscore.Domain) {
 	result, err := cf.getZones(domain)
 	if err != nil || len(result.Result) != 1 {
 		errMsg := "更新失败[001]:\n"
@@ -82,7 +82,7 @@ func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *conf
 		} else {
 			errMsg += fmt.Sprintf("%v", result)
 		}
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		return
 	}
 	zoneID := result.Result[0].ID
@@ -101,7 +101,7 @@ func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *conf
 		if err != nil {
 			errMsg += err.Error()
 		}
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		return
 	}
 
@@ -115,7 +115,7 @@ func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *conf
 }
 
 // 创建
-func (cf *Cloudflare) create(zoneID string, domain *config.Domain, recordType string, ipAddr string) {
+func (cf *Cloudflare) create(zoneID string, domain *ddnscore.Domain, recordType string, ipAddr string) {
 	record := &CloudflareRecord{
 		Type:    recordType,
 		Name:    domain.String(),
@@ -132,21 +132,24 @@ func (cf *Cloudflare) create(zoneID string, domain *config.Domain, recordType st
 	)
 	if err == nil && status.Success {
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
-		domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
 		//log.Printf("新增域名解析 %s 失败！Messages: %s", domain, status.Messages)
-		domain.SetDomainUpdateStatus(config.UpdatedFailed, err.Error())
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
 	}
 }
 
 // 修改
-func (cf *Cloudflare) modify(result CloudflareRecordsResp, zoneID string, domain *config.Domain, recordType string, ipAddr string) {
+func (cf *Cloudflare) modify(result CloudflareRecordsResp, zoneID string, domain *ddnscore.Domain, recordType string, ipAddr string) {
 
 	for _, record := range result.Result {
 		// 相同不修改
 		if record.Content == ipAddr {
-			//log.Printf("你的IP %s 没有变化, 域名 %s", ipAddr, domain)
-			domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+			if domain.UpdateStatus == ddnscore.UpdatedFailed {
+				domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
+			} else {
+				domain.SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
+			}
 			continue
 		}
 		var status CloudflareStatus
@@ -162,20 +165,20 @@ func (cf *Cloudflare) modify(result CloudflareRecordsResp, zoneID string, domain
 
 		if err == nil && status.Success {
 			//log.Printf("更新域名解析 %s 成功！IP: %s", domain, ipAddr)
-			domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 		} else {
 			//log.Printf("更新域名解析 %s 失败！Messages: %s", domain, status.Messages)
 			errMsg := "更新失败"
 			if err != nil {
 				errMsg = err.Error()
 			}
-			domain.SetDomainUpdateStatus(config.UpdatedFailed, errMsg)
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		}
 	}
 }
 
 // 获得域名记录列表
-func (cf *Cloudflare) getZones(domain *config.Domain) (result CloudflareZonesResp, err error) {
+func (cf *Cloudflare) getZones(domain *ddnscore.Domain) (result CloudflareZonesResp, err error) {
 	err = cf.request(
 		"GET",
 		fmt.Sprintf(zonesAPI+"?name=%s&status=%s&per_page=%s", domain.DomainName, "active", "50"),
@@ -210,7 +213,9 @@ func (cf *Cloudflare) request(method string, url string, data interface{}, resul
 	}
 
 	resp, err := client.Do(req)
-	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
+	if err != nil {
+		return err
+	}
 
-	return
+	return httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
 }

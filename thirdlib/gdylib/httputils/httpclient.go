@@ -5,8 +5,9 @@ import (
 	"time"
 )
 
-func CreateHttpClient(secureSkipVerify bool, proxyType, proxyUrl, user, passwd string, timeout time.Duration) (*http.Client, error) {
-	transport, err := NewTransport(secureSkipVerify, proxyType, proxyUrl, user, passwd)
+func CreateHttpClient(transportNetwork, localAddr string, secureSkipVerify bool, proxyType, proxyUrl, user, passwd string, timeout time.Duration) (*http.Client, error) {
+
+	transport, err := NewTransport(transportNetwork, localAddr, secureSkipVerify, proxyType, proxyUrl, user, passwd)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,10 @@
-//Copyright 2022 gdy, 272288813@qq.com
+// Copyright 2022 gdy, 272288813@qq.com
 package config
 
 import "time"
 
 type WhiteListConfigure struct {
-	BaseConfigure WhiteListBaseConfigure `json:"BaseConfigure`
+	BaseConfigure WhiteListBaseConfigure `json:"BaseConfigure"`
 	WhiteList     []WhiteListItem        `json:"WhiteList"` //白名单列表
 }
 

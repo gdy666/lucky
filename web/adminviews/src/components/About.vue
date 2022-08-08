@@ -6,13 +6,13 @@
     
     <div class="InfoDivRadius">
         <div class="line">
-            {{Info.AppName}}&nbsp;&nbsp;&nbsp;version:{{Info.Version}}
+            {{Info.AppName}}&nbsp;&nbsp;&nbsp;version:{{Info.Version}}&nbsp; {{Info.OS}}({{Info.ARCH}})
         </div>
         <div class="line">
-           {{Info.OS}}({{Info.ARCH}})
+          
         </div>
         <div class="line">
-            作者:古大羊 &nbsp;编译于{{Info.Date}}
+            作者:古大羊 &nbsp;{{Info.GoVersion}}&nbsp;编译时间:{{Info.Date}}
         </div>
 
         <div class="line">
@@ -58,7 +58,8 @@ var Info = ref({
     Version:"1.0.0",
     OS:"unknow",
     ARCH:"unknow",
-    Date:"2022-07-25"
+    Date:"2022-07-25",
+    GoVersion:""
 })
 
 

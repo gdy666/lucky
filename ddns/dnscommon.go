@@ -8,26 +8,28 @@ import (
 	"time"
 
 	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 	"github.com/miekg/dns"
 	"golang.org/x/net/idna"
 )
 
 type DNSCommon struct {
 	//Domains                *config.Domains
-	createUpdateDomainFunc func(recordType, ipaddr string, domain *config.Domain)
-	task                   *config.DDNSTask
+	createUpdateDomainFunc func(recordType, ipaddr string, domain *ddnscore.Domain)
+	task                   *ddnscore.DDNSTaskInfo
 }
 
-func (d *DNSCommon) SetCreateUpdateDomainFunc(f func(recordType, ipaddr string, domain *config.Domain)) {
+func (d *DNSCommon) SetCreateUpdateDomainFunc(f func(recordType, ipaddr string, domain *ddnscore.Domain)) {
 	d.createUpdateDomainFunc = f
 }
 
-func (d *DNSCommon) Init(task *config.DDNSTask) {
+func (d *DNSCommon) Init(task *ddnscore.DDNSTaskInfo) {
 	d.task = task
 }
 
-//添加或更新IPv4/IPv6记录
+// 添加或更新IPv4/IPv6记录
 func (d *DNSCommon) AddUpdateDomainRecords() string {
 	if d.task.TaskType == "IPv6" {
 
@@ -37,19 +39,26 @@ func (d *DNSCommon) AddUpdateDomainRecords() string {
 }
 
 func (d *DNSCommon) addUpdateDomainRecords(recordType string) string {
-	ipAddr, change, domains := d.task.DomainsState.CheckIPChange(recordType, d.task.TaskKey, d.task.GetIpAddr)
-	d.task.DomainsState.SetIPAddr(ipAddr)
+	ipAddr, change := d.task.CheckIPChange()
+	defer ddnscore.DDNSTaskInfoMapUpdateDomainInfo(d.task)
+
+	d.task.TaskState.SetIPAddr(ipAddr)
 	//及时刷新IP地址显示
-	config.DDNSTaskListFlushDomainsDetails(d.task.TaskKey, &d.task.DomainsState)
+	ddnscore.DDNSTaskInfoMapUpdateIPInfo(d.task)
 
 	if ipAddr == "" {
-		d.task.DomainsState.SetDomainUpdateStatus(config.UpdatePause, "获取公网IP失败")
+		d.task.TaskState.SetDomainUpdateStatus(ddnscore.UpdatePause, "获取公网IP失败")
+
 		return ipAddr
 	}
 
-	preFaildDomains := []*config.Domain{}
+	//var preFaildDomains []ddnscore.Domain
 
-	if time.Since(d.task.DomainsState.LastSyncTime) > time.Second*time.Duration(d.task.DNS.ForceInterval) {
+	checkDoamins := d.task.TaskState.Domains
+
+	//log.Printf("时间间隔:%d秒", time.Since(d.task.TaskState.LastSyncTime)/time.Second)
+
+	if time.Since(d.task.TaskState.LastSyncTime) > time.Second*time.Duration(d.task.DNS.ForceInterval-1) {
 		//log.Printf("DDNS任务[%s]强制更新", d.task.TaskName)
 		change = true
 		goto sync
@@ -58,53 +67,78 @@ func (d *DNSCommon) addUpdateDomainRecords(recordType string) string {
 	//设置原先状态成功的为继续成功
 	//不成功的就更新
 	if !change { //公网IP没有改变
-		for i := range domains { //如果原先状态成功或不改变就刷新时间
-			if domains[i].UpdateStatus == config.UpdatedNothing || domains[i].UpdateStatus == config.UpdatedSuccess {
-				domains[i].SetDomainUpdateStatus(config.UpdatedNothing, "")
+		checkDoamins = []ddnscore.Domain{}
+		for i := range d.task.TaskState.Domains { //如果原先状态成功或不改变就刷新时间
+			if d.task.TaskState.Domains[i].UpdateStatus == ddnscore.UpdatedNothing ||
+				d.task.TaskState.Domains[i].UpdateStatus == ddnscore.UpdatedSuccess {
+				d.task.TaskState.Domains[i].SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
+				ddnscore.DDNSTaskInfoMapUpdateDomainInfo(d.task)
 				continue
 			}
-			preFaildDomains = append(preFaildDomains, domains[i])
+			checkDoamins = append(checkDoamins, d.task.TaskState.Domains[i])
 		}
 
-		if len(preFaildDomains) == 0 {
+		if len(checkDoamins) == 0 {
 			return ipAddr
 		}
-		domains = preFaildDomains
 	}
 
 sync:
 	if change {
+		syncTime := time.Now()
 		defer func() {
 			//记录最近一次同步操作时间
-			d.task.DomainsState.LastSyncTime = time.Now()
+			d.task.TaskState.LastSyncTime = syncTime
 		}()
 	}
 
-	for _, domain := range domains {
+	for i, _ := range checkDoamins {
 
 		if d.createUpdateDomainFunc == nil {
 			log.Printf("ddns createUpdateDomainFunc undefine")
 			break
 		}
 
+		domain := getDomainItem(checkDoamins[i].String(), &d.task.TaskState.Domains)
+		if domain == nil {
+			log.Printf("getDomainItem nil")
+			continue
+		}
+
 		if d.task.DNS.ResolverDoaminCheck {
+			//<-time.After(time.Second)
+
 			domainResolverIPaddr, _ := ResolveDomainAtServerList(recordType, domain.String(), d.task.DNS.DNSServerList)
 			//log.Printf("domain:%s domainResolverIPaddr:%s ,ipaddr:%s", domain.String(), domainResolverIPaddr, ipAddr)
 
 			if domainResolverIPaddr == ipAddr {
-				if domain.UpdateStatus == config.UpdatedFailed {
-					domain.SetDomainUpdateStatus(config.UpdatedSuccess, "")
+				if domain.UpdateStatus == ddnscore.UpdatedFailed {
+					domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 				} else {
-					domain.SetDomainUpdateStatus(config.UpdatedNothing, "")
+					domain.SetDomainUpdateStatus(ddnscore.UpdatedNothing, "")
 				}
+				ddnscore.DDNSTaskInfoMapUpdateDomainInfo(d.task)
 				continue
 			}
 		}
 
 		d.createUpdateDomainFunc(recordType, ipAddr, domain)
+		ddnscore.DDNSTaskInfoMapUpdateDomainInfo(d.task)
 	}
 
 	return ipAddr
+}
+
+func getDomainItem(fullDomain string, domains *[]ddnscore.Domain) *ddnscore.Domain {
+	if domains == nil {
+		return nil
+	}
+	for i, domain := range *domains {
+		if domain.String() == fullDomain {
+			return &(*domains)[i]
+		}
+	}
+	return nil
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -112,6 +146,8 @@ sync:
 func (d *DNSCommon) CreateHTTPClient() (*http.Client, error) {
 	ddnsGlobalConf := config.GetDDNSConfigure()
 	return httputils.CreateHttpClient(
+		"tcp",
+		"",
 		!ddnsGlobalConf.HttpClientSecureVerify,
 		d.task.DNS.HttpClientProxyType,
 		d.task.DNS.HttpClientProxyAddr,
@@ -120,7 +156,7 @@ func (d *DNSCommon) CreateHTTPClient() (*http.Client, error) {
 		time.Duration(d.task.HttpClientTimeout)*time.Second)
 }
 
-//---------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------
 func ResolveDomainAtServerList(queryType, domain string, dnsServerList []string) (string, error) {
 
 	if len(dnsServerList) == 0 {
@@ -136,6 +172,11 @@ func ResolveDomainAtServerList(queryType, domain string, dnsServerList []string)
 	querytype, querytypeOk := dns.StringToType[strings.ToUpper(queryType)]
 	if !querytypeOk {
 		return "", fmt.Errorf("queryType error:%s", queryType)
+	}
+
+	if strings.HasPrefix(domain, "*.") {
+		randomStr := stringsp.GetRandomString(8)
+		domain = strings.Replace(domain, "*", randomStr, 1)
 	}
 
 	domain = dns.Fqdn(domain)

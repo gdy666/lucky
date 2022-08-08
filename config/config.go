@@ -1,4 +1,4 @@
-//Copyright 2022 gdy, 272288813@qq.com
+// Copyright 2022 gdy, 272288813@qq.com
 package config
 
 import (
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -68,7 +69,7 @@ var programConfigureMutex sync.RWMutex
 var programConfigure *ProgramConfigure
 var configurePath string
 
-//var readConfigureFileOnce sync.Once
+// var readConfigureFileOnce sync.Once
 var checkConfigureFileOnce sync.Once
 var configureFileSign int8 = -1
 
@@ -108,8 +109,7 @@ func SetConfig(p *ProgramConfigure) error {
 func GetConfig() *ProgramConfigure {
 	programConfigureMutex.RLock()
 	defer programConfigureMutex.RUnlock()
-	var conf ProgramConfigure
-	conf = *programConfigure
+	conf := *programConfigure
 	return &conf
 }
 
@@ -141,7 +141,7 @@ func GetDDNSConfigure() DDNSConfigure {
 	return conf
 }
 
-//保存基础配置
+// 保存基础配置
 func SetBaseConfigure(conf *BaseConfigure) error {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
@@ -178,6 +178,11 @@ func SetDDNSConfigure(conf *DDNSConfigure) error {
 }
 
 func Read(filePath string) (err error) {
+
+	if runtime.GOOS == "windows" && filePath == "" {
+		filePath = "lucky.conf"
+		log.Printf("未指定配置文件路径,使用默认路径lucky所在位置,默认配置文件名lucky.conf")
+	}
 
 	pc, err := readProgramConfigure(filePath)
 	if err != nil {

@@ -82,7 +82,8 @@ func main() {
 
 	rule.EnableAllRelayRule() //开启规则
 
-	config.DDNSTaskListTaskDetailsInit()
+	//config.DDNSTaskListTaskDetailsInit()
+	config.DDNSTaskListConfigureCheck()
 	ddnsConf := config.GetDDNSConfigure()
 	if ddnsConf.Enable {
 		ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)

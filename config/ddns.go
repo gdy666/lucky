@@ -2,24 +2,10 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
-	"regexp"
-	"strings"
-	"sync"
-	"time"
 
-	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 )
-
-// Ipv4Reg IPv4正则
-const Ipv4Reg = `((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])`
-
-// Ipv6Reg IPv6正则
-const Ipv6Reg = `((([0-9A-Fa-f]{1,4}:){7}([0-9A-Fa-f]{1,4}|:))|(([0-9A-Fa-f]{1,4}:){6}(:[0-9A-Fa-f]{1,4}|((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){5}(((:[0-9A-Fa-f]{1,4}){1,2})|:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3})|:))|(([0-9A-Fa-f]{1,4}:){4}(((:[0-9A-Fa-f]{1,4}){1,3})|((:[0-9A-Fa-f]{1,4})?:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){3}(((:[0-9A-Fa-f]{1,4}){1,4})|((:[0-9A-Fa-f]{1,4}){0,2}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){2}(((:[0-9A-Fa-f]{1,4}){1,5})|((:[0-9A-Fa-f]{1,4}){0,3}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(([0-9A-Fa-f]{1,4}:){1}(((:[0-9A-Fa-f]{1,4}){1,6})|((:[0-9A-Fa-f]{1,4}){0,4}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:))|(:(((:[0-9A-Fa-f]{1,4}){1,7})|((:[0-9A-Fa-f]{1,4}){0,5}:((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}))|:)))`
-
-var ipUrlAddrMap sync.Map
 
 type DDNSConfigure struct {
 	Enable                 bool `json:"Enable"`
@@ -45,23 +31,21 @@ type DDNSTask struct {
 	Webhook
 	TTL               string `json:"TTL"`
 	HttpClientTimeout int    `json:"HttpClientTimeout"`
-	//-------------------------------------
-	//IpCache     IpCache `json:"-"`
-	DomainsState DomainsState `json:"-"`
 }
 
 type Webhook struct {
-	WebhookEnable          bool     `json:"WebhookEnable"`          //Webhook开关
-	WebhookCallOnGetIPfail bool     `json:"WebhookCallOnGetIPfail"` //获取IP失败时触发Webhook 开关
-	WebhookURL             string   `json:"WebhookURL"`
-	WebhookMethod          string   `json:"WebhookMethod"`
-	WebhookHeaders         []string `json:"WebhookHeaders"`
-	WebhookRequestBody     string   `json:"WebhookRequestBody"`
-	WebhookSuccessContent  []string `json:"WebhookSuccessContent"` //接口调用成功包含的内容
-	WebhookProxy           string   `json:"WebhookProxy"`          //使用DNS代理设置  ""表示禁用，"dns"表示使用dns的代理设置
-	WebhookProxyAddr       string   `json:"WebhookProxyAddr"`      //代理服务器IP
-	WebhookProxyUser       string   `json:"WebhookProxyUser"`      //代理用户
-	WebhookProxyPassword   string   `json:"WebhookProxyPassword"`  //代理密码
+	WebhookEnable                             bool     `json:"WebhookEnable"`          //Webhook开关
+	WebhookCallOnGetIPfail                    bool     `json:"WebhookCallOnGetIPfail"` //获取IP失败时触发Webhook 开关
+	WebhookURL                                string   `json:"WebhookURL"`
+	WebhookMethod                             string   `json:"WebhookMethod"`
+	WebhookHeaders                            []string `json:"WebhookHeaders"`
+	WebhookRequestBody                        string   `json:"WebhookRequestBody"`
+	WebhookDisableCallbackSuccessContentCheck bool     `json:"WebhookDisableCallbackSuccessContentCheck"` //禁用成功调用返回检测
+	WebhookSuccessContent                     []string `json:"WebhookSuccessContent"`                     //接口调用成功包含的内容
+	WebhookProxy                              string   `json:"WebhookProxy"`                              //使用DNS代理设置  ""表示禁用，"dns"表示使用dns的代理设置
+	WebhookProxyAddr                          string   `json:"WebhookProxyAddr"`                          //代理服务器IP
+	WebhookProxyUser                          string   `json:"WebhookProxyUser"`                          //代理用户
+	WebhookProxyPassword                      string   `json:"WebhookProxyPassword"`                      //代理密码
 }
 
 // DNSConfig DNS配置
@@ -81,26 +65,13 @@ type DNSConfig struct {
 }
 
 type DNSCallback struct {
-	URL                    string   `json:"URL"`    //请求地址
-	Method                 string   `json:"Method"` //请求方法
-	Headers                []string `json:"Headers"`
-	RequestBody            string   `json:"RequestBody"`
-	Server                 string   `json:"Server"`                 //预设服务商
-	CallbackSuccessContent []string `json:"CallbackSuccessContent"` //接口调用成功包含内容
-}
-
-//Check 检测IP是否有改变
-func (d *DDNSTask) IPChangeCheck(newAddr string) bool {
-	if newAddr == "" {
-		return true
-	}
-	// 地址改变
-	if d.DomainsState.IpAddr != newAddr {
-		//log.Printf("公网地址改变:[%s]===>[%s]", d.DomainsInfo.IpAddr, newAddr)
-		d.DomainsState.IpAddr = newAddr
-		return true
-	}
-	return false
+	URL                                string   `json:"URL"`    //请求地址
+	Method                             string   `json:"Method"` //请求方法
+	Headers                            []string `json:"Headers"`
+	RequestBody                        string   `json:"RequestBody"`
+	Server                             string   `json:"Server"`                             //预设服务商
+	DisableCallbackSuccessContentCheck bool     `json:"DisableCallbackSuccessContentCheck"` //禁用成功调用返回检测
+	CallbackSuccessContent             []string `json:"CallbackSuccessContent"`             //接口调用成功包含内容
 }
 
 var checkIPv4URLList = []string{"https://4.ipw.cn", "http://v4.ip.zxinc.org/getip", "https://myip4.ipip.net", "https://www.taobao.com/help/getip.php", "https://ddns.oray.com/checkip", "https://ip.3322.net", "https://v4.myip.la"}
@@ -157,25 +128,10 @@ var DefaultIPv4DNSServerList = []string{
 // 	programConfigure.DDNSTaskList[taskIndex].IpCache.ForceCompare = force
 // }
 
-func CleanIPUrlAddrMap() {
-	keys := []string{}
-	ipUrlAddrMap.Range(func(key, value any) bool {
-		keys = append(keys, key.(string))
-		return true
-	})
-	for _, k := range keys {
-		ipUrlAddrMap.Delete(k)
-	}
-}
-
-func DDNSTaskListTaskDetailsInit() {
+func DDNSTaskListConfigureCheck() {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
 	for i := range programConfigure.DDNSTaskList {
-		programConfigure.DDNSTaskList[i].DomainsState.Init(programConfigure.DDNSTaskList[i].Domains)
-		programConfigure.DDNSTaskList[i].DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
-
-		//
 		if programConfigure.DDNSTaskList[i].DNS.ForceInterval < 60 {
 			programConfigure.DDNSTaskList[i].DNS.ForceInterval = 60
 		} else if programConfigure.DDNSTaskList[i].DNS.ForceInterval > 360000 {
@@ -188,23 +144,6 @@ func DDNSTaskListTaskDetailsInit() {
 			programConfigure.DDNSTaskList[i].HttpClientTimeout = 60
 		}
 	}
-}
-
-func DDNSTaskIPCacheCheck(taskKey, ip string) (bool, error) {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	taskIndex := -1
-
-	for i := range programConfigure.DDNSTaskList {
-		if programConfigure.DDNSTaskList[i].TaskKey == taskKey {
-			taskIndex = i
-			break
-		}
-	}
-	if taskIndex == -1 {
-		return true, fmt.Errorf("找不到key对应的DDNS任务")
-	}
-	return programConfigure.DDNSTaskList[taskIndex].IPChangeCheck(ip), nil
 }
 
 func DDNSTaskSetWebhookCallResult(taskKey string, result bool, message string) {
@@ -226,29 +165,20 @@ func DDNSTaskSetWebhookCallResult(taskKey string, result bool, message string) {
 
 }
 
-type DDNSTaskDetails struct {
-	DDNSTask
-	TaskState DomainsState `json:"TaskState"`
-}
-
-func GetDDNSTaskList() []DDNSTaskDetails {
+func GetDDNSTaskConfigureList() []*DDNSTask {
 	programConfigureMutex.RLock()
 	defer programConfigureMutex.RUnlock()
 
-	var resList []DDNSTaskDetails
+	var resList []*DDNSTask
 
 	for i := range programConfigure.DDNSTaskList {
-		var info DDNSTaskDetails
-		programConfigure.DDNSTaskList[i].DomainsState.Mutex.RLock()
-		info.DDNSTask = programConfigure.DDNSTaskList[i]
-		info.TaskState = programConfigure.DDNSTaskList[i].DomainsState
-		programConfigure.DDNSTaskList[i].DomainsState.Mutex.RUnlock()
-		resList = append(resList, info)
+		task := programConfigure.DDNSTaskList[i]
+		resList = append(resList, &task)
 	}
 	return resList
 }
 
-func GetDDNSTaskByKey(taskKey string) *DDNSTaskDetails {
+func GetDDNSTaskByKey(taskKey string) *DDNSTask {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
 	taskIndex := -1
@@ -262,51 +192,15 @@ func GetDDNSTaskByKey(taskKey string) *DDNSTaskDetails {
 	if taskIndex == -1 {
 		return nil
 	}
-	var info DDNSTaskDetails
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.Mutex.RLock()
-	info.DDNSTask = programConfigure.DDNSTaskList[taskIndex]
-	info.TaskState = programConfigure.DDNSTaskList[taskIndex].DomainsState
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.Mutex.RUnlock()
-	return &info
-}
+	res := programConfigure.DDNSTaskList[taskIndex]
 
-func DDNSTaskListFlushDomainsDetails(taskKey string, state *DomainsState) {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	taskIndex := -1
-
-	for i := range programConfigure.DDNSTaskList {
-		if programConfigure.DDNSTaskList[i].TaskKey == taskKey {
-			taskIndex = i
-			break
-		}
-	}
-	if taskIndex == -1 {
-		return
-	}
-
-	var checkDomains []*Domain
-	//防止有域名被删除
-	for _, new := range state.Domains {
-		for j, pre := range programConfigure.DDNSTaskList[taskIndex].DomainsState.Domains {
-			if strings.Compare(new.String(), pre.String()) == 0 {
-				checkDomains = append(checkDomains, programConfigure.DDNSTaskList[taskIndex].DomainsState.Domains[j])
-				break
-			}
-		}
-	}
-
-	state.Domains = checkDomains
-
-	programConfigure.DDNSTaskList[taskIndex].DomainsState = *state
+	return &res
 }
 
 func DDNSTaskListAdd(task *DDNSTask) error {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
 	task.TaskKey = stringsp.GetRandomString(16)
-	task.DomainsState.Init(task.Domains)
-	task.DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
 	programConfigure.DDNSTaskList = append(programConfigure.DDNSTaskList, *task)
 	return Save()
 }
@@ -382,29 +276,8 @@ func EnableDDNSTaskByKey(taskKey string, enable bool) error {
 		return fmt.Errorf("开关DDNS任务失败,TaskKey不存在")
 	}
 	programConfigure.DDNSTaskList[taskIndex].Enable = enable
-	if enable {
-		programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
-	} else {
-		programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(UpdateStop, "")
-	}
+
 	return Save()
-}
-
-func UpdateDomainsStateByTaskKey(taskKey string, status updateStatusType, message string) {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	taskIndex := -1
-
-	for i := range programConfigure.DDNSTaskList {
-		if programConfigure.DDNSTaskList[i].TaskKey == taskKey {
-			taskIndex = i
-			break
-		}
-	}
-	if taskIndex == -1 {
-		return
-	}
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(status, message)
 }
 
 func UpdateTaskToDDNSTaskList(taskKey string, task DDNSTask) error {
@@ -434,15 +307,7 @@ func UpdateTaskToDDNSTaskList(taskKey string, task DDNSTask) error {
 	programConfigure.DDNSTaskList[taskIndex].DNS = task.DNS
 	programConfigure.DDNSTaskList[taskIndex].Webhook = task.Webhook
 	programConfigure.DDNSTaskList[taskIndex].TTL = task.TTL
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.IpAddr = ""
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.Init(task.Domains)
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.IPAddrHistory = task.DomainsState.IPAddrHistory
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallHistroy = task.DomainsState.WebhookCallHistroy
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.SetDomainUpdateStatus(UpdateWaiting, "")
 	programConfigure.DDNSTaskList[taskIndex].HttpClientTimeout = task.HttpClientTimeout
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallErrorMsg = ""
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallResult = false
-	programConfigure.DDNSTaskList[taskIndex].DomainsState.WebhookCallTime = ""
 
 	return Save()
 }
@@ -459,165 +324,3 @@ func DeleteDDNSTaskListlice(a []DDNSTask, deleteIndex int) []DDNSTask {
 }
 
 //****************************
-
-func (d *DDNSTask) GetIpAddr() (result string) {
-	if d.TaskType == "IPv6" {
-		return d.getIpv6Addr()
-	}
-	return d.getIpv4Addr()
-}
-
-// getIpv4Addr 获得IPv4地址
-func (d *DDNSTask) getIpv4Addr() (result string) {
-	// 判断从哪里获取IP
-	if d.GetType == "netInterface" {
-		result = GetIPFromNetInterface("IPv4", d.NetInterface, d.IPReg)
-		// 从网卡获取IP
-		// ipv4, _, err := GetNetInterface()
-		// if err != nil {
-		// 	log.Println("从网卡获得IPv4失败!")
-		// 	return
-		// }
-
-		// for _, netInterface := range ipv4 {
-		// 	if netInterface.NetInterfaceName == d.NetInterface && len(netInterface.AddressList) > 0 {
-		// 		return netInterface.AddressList[0]
-		// 	}
-		// }
-
-		// log.Println("从网卡中获得IPv4失败! 网卡名: ", d.NetInterface)
-		return
-	}
-
-	ddnsGlobalConf := GetDDNSConfigure()
-
-	client, err := httputils.CreateHttpClient(
-		ddnsGlobalConf.HttpClientSecureVerify,
-		"",
-		"",
-		"",
-		"",
-		time.Duration(d.HttpClientTimeout)*time.Second)
-
-	if err != nil {
-		log.Printf("%s", err.Error())
-		return
-	}
-
-	for _, url := range d.URL {
-		url = strings.TrimSpace(url)
-
-		mapIp, ok := ipUrlAddrMap.Load(url)
-		if ok {
-			//log.Printf("URL[%s]已缓存IP[%s]", url, mapIp)
-			result = mapIp.(string)
-			return
-		}
-
-		resp, err := client.Get(url)
-		if err != nil {
-			//log.Printf("连接失败!%s查看接口能否返回IPv4地址</a>,", url)
-			continue
-		}
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Printf("读取IPv4结果失败! 接口:%s", url)
-			continue
-		}
-		comp := regexp.MustCompile(Ipv4Reg)
-		result = comp.FindString(string(body))
-		if result != "" {
-			ipUrlAddrMap.Store(url, result)
-			return
-		}
-		//  else {
-		// 	log.Printf("获取IPv4结果失败! 接口: %s ,返回值: %s\n", url, result)
-		// }
-	}
-
-	log.Printf("所有查询公网IPv4的接口均获取IPv4结果失败,请检查接口或当前网络情况")
-	return
-}
-
-// getIpv6Addr 获得IPv6地址
-func (d *DDNSTask) getIpv6Addr() (result string) {
-	// 判断从哪里获取IP
-	if d.GetType == "netInterface" {
-		// 从网卡获取IP
-		// _, ipv6, err := GetNetInterface()
-		// if err != nil {
-		// 	log.Println("从网卡获得IPv6失败!")
-		// 	return
-		// }
-
-		// for _, netInterface := range ipv6 {
-		// 	if netInterface.NetInterfaceName == d.NetInterface && len(netInterface.AddressList) > 0 {
-		// 		if d.IPReg != "" {
-		// 			log.Printf("IPv6将使用正则表达式 %s 进行匹配\n", d.IPReg)
-		// 			for i := 0; i < len(netInterface.AddressList); i++ {
-		// 				matched, err := regexp.MatchString(d.IPReg, netInterface.AddressList[i])
-		// 				if matched && err == nil {
-		// 					log.Println("匹配成功! 匹配到地址: ", netInterface.AddressList[i])
-		// 					return netInterface.AddressList[i]
-		// 				}
-		// 				log.Printf("第 %d 个地址 %s 不匹配, 将匹配下一个地址\n", i+1, netInterface.AddressList[i])
-		// 			}
-		// 			log.Println("没有匹配到任何一个IPv6地址, 将使用第一个地址")
-		// 		}
-		// 		return netInterface.AddressList[0]
-		// 	}
-		// }
-
-		// log.Println("从网卡中获得IPv6失败! 网卡名: ", d.NetInterface)
-		result = GetIPFromNetInterface("IPv6", d.NetInterface, d.IPReg)
-		return
-	}
-
-	ddnsGlobalConf := GetDDNSConfigure()
-	client, err := httputils.CreateHttpClient(
-		!ddnsGlobalConf.HttpClientSecureVerify,
-		"",
-		"",
-		"",
-		"",
-		time.Duration(d.HttpClientTimeout)*time.Second)
-
-	if err != nil {
-		log.Printf("%s", err.Error())
-		return
-	}
-
-	for _, url := range d.URL {
-		url = strings.TrimSpace(url)
-
-		mapIp, ok := ipUrlAddrMap.Load(url)
-		if ok {
-			//log.Printf("URL[%s]已缓存IP[%s]", url, mapIp)
-			result = mapIp.(string)
-			return
-		}
-
-		resp, err := client.Get(url)
-		if err != nil {
-			//log.Printf("连接失败! %s查看接口能否返回IPv6地址 ", url)
-			continue
-		}
-
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			log.Println("读取IPv6结果失败! 接口: ", url)
-			continue
-		}
-		comp := regexp.MustCompile(Ipv6Reg)
-		result = comp.FindString(string(body))
-		if result != "" {
-			ipUrlAddrMap.Store(url, result)
-			return
-		}
-	}
-	log.Printf("所有查询公网IPv6的接口均获取IPv6结果失败,请检查接口或当前网络情况")
-
-	return
-}

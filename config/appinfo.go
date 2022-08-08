@@ -6,12 +6,13 @@ import (
 )
 
 type AppInfo struct {
-	AppName string
-	Version string
-	OS      string
-	ARCH    string
-	Date    string
-	RunTime string
+	AppName   string
+	Version   string
+	OS        string
+	ARCH      string
+	Date      string
+	RunTime   string
+	GoVersion string
 }
 
 var appInfo AppInfo
@@ -27,6 +28,7 @@ func InitAppInfo(version, date string) {
 	appInfo.OS = runtime.GOOS
 	appInfo.ARCH = runtime.GOARCH
 	appInfo.RunTime = time.Now().Format("2006-01-02 15:04:05")
+	appInfo.GoVersion = runtime.Version()
 
 	time.Now().Format("2006-01-02T15:04:05Z")
 

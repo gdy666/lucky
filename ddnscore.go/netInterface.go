@@ -1,4 +1,4 @@
-package config
+package ddnscore
 
 import (
 	"log"

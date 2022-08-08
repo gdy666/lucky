@@ -350,6 +350,15 @@
                                 </el-form-item>
                             </div>
 
+                            <div v-if="DDNSForm.DNS.Name == 'porkbun'">
+                                <el-form-item label-width="auto">
+                                    <el-link type="primary" style="font-size: small;"
+                                        href="https://porkbun.com/account/api" target="_blank">
+                                        创建 Access
+                                    </el-link>
+                                </el-form-item>
+                            </div>
+
                             <div v-if="DDNSForm.DNS.Name == 'callback'">
                                 <el-form-item label-width="auto">
                                     <p style="font-size:1px">支持的变量 #{ip}, #{domain}, #{recordType}, #{ttl}</p>
@@ -511,19 +520,29 @@
                             </el-tooltip>
 
 
-                            <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
-                                <template #content>用于判断记录接口是否成功调用,多种表示成功的不同字符串请分多行写<br />
-                                    支持的变量<br />
-                                    #{ip} : 外网IP<br />
-                                    #{domain} : 域名<br />
-                                    #{recordType} : A 或者 AAAA <br />
-                                    #{ttl} : TTL值</template>
-                                <el-form-item label="接口调用成功包含的字符串" label-width="auto">
-                                    <el-input v-model="DDNSFormCallbackSuccessContentArea"
-                                        :autosize="{ minRows: 3, maxRows: 5 }" type="textarea" autocomplete="off"
-                                        placeholder="" />
+                            <el-tooltip content="禁用接口调用成功字符串检测,开启后仅以http StatusCode==200判断接口是否成功调用." placement="top">
+
+                                <el-form-item label="禁用接口调用成功字符串检测" label-width="auto">
+                                    <el-switch v-model="DDNSForm.DNS.Callback.DisableCallbackSuccessContentCheck"
+                                        inline-prompt width="50px" active-text="是" inactive-text="否" />
                                 </el-form-item>
                             </el-tooltip>
+
+                            <div v-show="!DDNSForm.DNS.Callback.DisableCallbackSuccessContentCheck">
+                                <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
+                                    <template #content>用于判断记录接口是否成功调用,多种表示成功的不同字符串请分多行写<br />
+                                        支持的变量<br />
+                                        #{ip} : 外网IP<br />
+                                        #{domain} : 域名<br />
+                                        #{recordType} : A 或者 AAAA <br />
+                                        #{ttl} : TTL值</template>
+                                    <el-form-item label="接口调用成功包含的字符串" label-width="auto">
+                                        <el-input v-model="DDNSFormCallbackSuccessContentArea"
+                                            :autosize="{ minRows: 3, maxRows: 5 }" type="textarea" autocomplete="off"
+                                            placeholder="" />
+                                    </el-form-item>
+                                </el-tooltip>
+                            </div>
 
                         </div>
 
@@ -710,11 +729,10 @@
 
                         <div v-show="DDNSForm.WebhookEnable">
 
-                            <el-tooltip class="box-item" effect="dark"
-                                content="获取IP失败时同样触发Webhook,默认不开启">
+                            <el-tooltip class="box-item" effect="dark" content="获取IP失败时同样触发Webhook,默认不开启">
                                 <el-form-item label="获取IP失败时触发Webhook" label-width="auto">
-                                <el-switch v-model="DDNSForm.WebhookCallOnGetIPfail" inline-prompt width="50px" active-text="启用"
-                                    inactive-text="禁用" />
+                                    <el-switch v-model="DDNSForm.WebhookCallOnGetIPfail" inline-prompt width="50px"
+                                        active-text="启用" inactive-text="禁用" />
                                 </el-form-item>
                             </el-tooltip>
 
@@ -825,7 +843,7 @@
                                 <el-tooltip class="box-item" effect="dark" content="">
                                     <template #content>支持的变量 <br />
                                         #{ipAddr} : 当前公网IP<br />
-                                          #{time} : 触发Webhook的时间 <br />
+                                        #{time} : 触发Webhook的时间 <br />
                                         #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
                                         #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
                                         #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
@@ -886,6 +904,18 @@
                                 </el-tooltip>
 
 
+
+                                <el-tooltip content="禁用Webhook接口调用成功字符串检测,开启后仅以http StatusCode==200判断接口是否成功调用."
+                                    placement="top">
+
+                                    <el-form-item label="禁用Webhook接口调用成功字符串检测" label-width="auto">
+                                        <el-switch v-model="DDNSForm.WebhookDisableCallbackSuccessContentCheck"
+                                            inline-prompt width="50px" active-text="是" inactive-text="否" />
+                                    </el-form-item>
+                                </el-tooltip>
+
+
+                                 <div v-show="!DDNSForm.WebhookDisableCallbackSuccessContentCheck">
                                 <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
                                     <template #content>用于判断记录Webhook 接口是否成功调用<br />
                                         多种表示成功的不同字符串请分多行写<br />
@@ -901,7 +931,7 @@
                                             placeholder="" />
                                     </el-form-item>
                                 </el-tooltip>
-
+                                </div>
 
 
                             </div>
@@ -1021,6 +1051,7 @@ var taskList = ref([{
             Headers: [""],
             RequestBody: "",
             Server: "",
+            DisableCallbackSuccessContentCheck:false,
             CallbackSuccessContent: [""]
         },
 
@@ -1030,6 +1061,7 @@ var taskList = ref([{
     WebhookMethod: "",
     WebhookHeaders: [""],
     WebhookRequestBody: "",
+    WebhookDisableCallbackSuccessContentCheck:false,
     WebhookSuccessContent: [""],
     WebhookProxy: "",
     WebhookProxyAddr: "",
@@ -1250,6 +1282,10 @@ const DNSServerList = [
         label: '华为云',
     },
     {
+        value: 'porkbun',
+        label: 'Porkbun',
+    },
+    {
         value: 'callback',
         label: '自定义(Callback)',
     },
@@ -1331,7 +1367,7 @@ const WebhookServerSelectChange = (server : string)=>{
                             content:[
                                 [{tag:"text",text:"IP地址：#{ipAddr}"}],
                                 [{tag:"text",text:"域名更新成功列表：#{successDomainsLine}"}],
-                                [{tag:"text",text:"域名更新失败列表：#{successDomainsLine}"}],
+                                [{tag:"text",text:"域名更新失败列表：#{failedDomainsLine}"}],
                                 [{tag:"text",text:"Webhook触发时间: \n#{time}"}],
                                 ]
                         }
@@ -1419,6 +1455,8 @@ const getIDLabel = () => {
             return "Access Key Id"
         case "baiducloud":
             return "AccessKey ID"
+        case "porkbun":
+            return "API Key"
         case "callback":
             return "URL"
         default:
@@ -1440,6 +1478,8 @@ const getSecretLabel = () => {
             return "Secret Access Key"
         case "baiducloud":
             return "AccessKey Secret"
+        case "porkbun":
+            return "Secret Key"
         case "callback":
             return "RequestBody"
         default:
@@ -1457,6 +1497,8 @@ const showDNSIDFormItem = () => {
         case "huaweicloud":
             return true
         case "baiducloud":
+            return true
+        case "porkbun":
             return true
         case "callback":
             return false
@@ -1477,6 +1519,8 @@ const showDNSSecretFormItem = () => {
         case "huaweicloud":
             return true
         case "baiducloud":
+            return true
+        case "porkbun":
             return true
         case "callback":
             return false
@@ -1539,6 +1583,7 @@ const DDNSForm = ref(
                 Headers: [""],
                 RequestBody: "",
                 Server: "",
+                DisableCallbackSuccessContentCheck:false,
                 CallbackSuccessContent: [""],
             },
         },
@@ -1548,6 +1593,7 @@ const DDNSForm = ref(
         WebhookMethod: "",
         WebhookHeaders: [""],
         WebhookRequestBody: "",
+        WebhookDisableCallbackSuccessContentCheck:false,
         WebhookSuccessContent: [""],
         WebhookProxy: "",
         WebhookProxyAddr: "",
@@ -1585,6 +1631,7 @@ const preDDNSFrom = ref(
                 Headers: [""],
                 RequestBody: "",
                 Server: "",
+                DisableCallbackSuccessContentCheck:false,
                 CallbackSuccessContent: [""],
             },
         },
@@ -1594,6 +1641,7 @@ const preDDNSFrom = ref(
         WebhookMethod: "",
         WebhookHeaders: [""],
         WebhookRequestBody: "",
+        WebhookDisableCallbackSuccessContentCheck:false,
         WebhookSuccessContent: [""],
         WebhookProxy: "",
         WebhookProxyAddr: "",
@@ -1650,6 +1698,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Headers: [""],
                 RequestBody: "",
                 Server: "other",
+                DisableCallbackSuccessContentCheck:false,
                 CallbackSuccessContent: [],
             }
         }
@@ -1659,6 +1708,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         DDNSForm.value.WebhookMethod = "get"
         DDNSForm.value.WebhookHeaders = []
         DDNSForm.value.WebhookRequestBody = ""
+        DDNSForm.value.WebhookDisableCallbackSuccessContentCheck=false,
         DDNSForm.value.WebhookSuccessContent = []
         DDNSForm.value.WebhookProxy = ""
         DDNSForm.value.WebhookProxyAddr = ""
@@ -1701,6 +1751,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Method: "get",
                 Headers: [""],
                 RequestBody: "",
+                DisableCallbackSuccessContentCheck:false,
                 CallbackSuccessContent: [],
                 Server: "other",
             }
@@ -1711,6 +1762,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         preDDNSFrom.value.WebhookMethod = "get"
         preDDNSFrom.value.WebhookHeaders = []
         preDDNSFrom.value.WebhookRequestBody = ""
+        preDDNSFrom.value.WebhookDisableCallbackSuccessContentCheck=false,
         preDDNSFrom.value.WebhookSuccessContent = []
         preDDNSFrom.value.WebhookProxy = ""
         preDDNSFrom.value.WebhookProxyAddr = ""
@@ -1745,6 +1797,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Headers: task.DNS.Callback.Headers,
                 RequestBody: task.DNS.Callback.RequestBody,
                 Server: task.DNS.Callback.Server,
+                DisableCallbackSuccessContentCheck:task.DNS.Callback.DisableCallbackSuccessContentCheck,
                 CallbackSuccessContent: task.DNS.Callback.CallbackSuccessContent
             }
         }
@@ -1754,6 +1807,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         DDNSForm.value.WebhookRequestBody = task.WebhookRequestBody
         DDNSForm.value.WebhookMethod = task.WebhookMethod
         DDNSForm.value.WebhookHeaders = task.WebhookHeaders
+        DDNSForm.value.WebhookDisableCallbackSuccessContentCheck = task.WebhookDisableCallbackSuccessContentCheck
         DDNSForm.value.WebhookSuccessContent = task.WebhookSuccessContent
         DDNSForm.value.WebhookProxy = task.WebhookProxy
         DDNSForm.value.WebhookProxyAddr = task.WebhookProxyAddr
@@ -1795,6 +1849,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Headers: task.DNS.Callback.Headers,
                 RequestBody: task.DNS.Callback.RequestBody,
                 CallbackSuccessContent: task.DNS.Callback.CallbackSuccessContent,
+                DisableCallbackSuccessContentCheck:task.DNS.Callback.DisableCallbackSuccessContentCheck,
                 Server: task.DNS.Callback.Server,
             }
         }
@@ -1803,6 +1858,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         preDDNSFrom.value.WebhookHeaders = task.WebhookHeaders
         preDDNSFrom.value.WebhookCallOnGetIPfail = task.WebhookCallOnGetIPfail
         preDDNSFrom.value.WebhookURL = task.WebhookURL
+        preDDNSFrom.value.WebhookDisableCallbackSuccessContentCheck = task.WebhookDisableCallbackSuccessContentCheck
         preDDNSFrom.value.WebhookSuccessContent = task.WebhookSuccessContent
         preDDNSFrom.value.WebhookRequestBody = task.WebhookRequestBody
         preDDNSFrom.value.WebhookProxy = task.WebhookProxy
@@ -2085,7 +2141,15 @@ const checkDDNSFormAvalid = () => {
                 return "Webhook 代理设置服务器地址不能为空"
             }
         }
+
+        if (!data.WebhookDisableCallbackSuccessContentCheck && data.WebhookSuccessContent.length == 0) {
+            return "Webhook接口调用成功包含的字符串不能为空,如果要指定为空请禁用检测"
+        }
     }
+
+
+
+
 
     //清空无用数据
     if (data.DNS.Name == "callback") {
@@ -2094,8 +2158,15 @@ const checkDDNSFormAvalid = () => {
         if (data.DNS.Callback.Method == "get") {
             data.DNS.Callback.RequestBody = ""
         }
+
+
+
     } else {
-        data.DNS.Callback = { URL: "", Method: "", Headers: [], RequestBody: "", Server: "", CallbackSuccessContent: [] }
+        data.DNS.Callback = { 
+            URL: "", 
+            Method: "", 
+            Headers: [], 
+            RequestBody: "", Server: "", CallbackSuccessContent: [],DisableCallbackSuccessContentCheck:false }
     }
 
     if (data.WebhookEnable) {
@@ -2122,11 +2193,14 @@ const checkDNSData = (dns: any) => {
                 return "请选择Callback的请求方法"
             }
 
-
-
             if (dns.Callback.URL == "") {
                 return "Callback 接口地址不能为空"
             }
+
+            if (!dns.Callback.DisableCallbackSuccessContentCheck && dns.Callback.CallbackSuccessContent.length==0){
+                return "接口调用成功包含的字符串不能为空,如果要指定为空请禁用检测"
+            }
+
             break;
         default:
             if (dns.Secret == "" || dns.ID == "") {
@@ -2159,6 +2233,7 @@ const autocompleteCallbackForm = () => {
                     DDNSForm.value.DNS.Callback.Headers = []
                     DDNSForm.value.DNS.Callback.Method = 'get'
                     DDNSForm.value.DNS.Callback.RequestBody = ""
+                    DDNSForm.value.DNS.Callback.DisableCallbackSuccessContentCheck = false
                     DDNSForm.value.DNS.Callback.CallbackSuccessContent = ["chenggong", "chongfu", "ok"]
                     DDNSFormCallbackSuccessContentArea.value = 'chenggong\nchongfu\nok'
                     break;
@@ -2168,6 +2243,7 @@ const autocompleteCallbackForm = () => {
                     DDNSForm.value.DNS.Callback.Headers = []
                     DDNSForm.value.DNS.Callback.Method = 'get'
                     DDNSForm.value.DNS.Callback.RequestBody = ""
+                    DDNSForm.value.DNS.Callback.DisableCallbackSuccessContentCheck = false
                     DDNSForm.value.DNS.Callback.CallbackSuccessContent = ["nochg #{ip}", "good #{ip}"]
                     DDNSFormCallbackSuccessContentArea.value = 'nochg #{ip}\ngood #{ip}'
                     break;
@@ -2181,6 +2257,7 @@ const autocompleteCallbackForm = () => {
                     DDNSForm.value.DNS.Callback.Headers = []
                     DDNSForm.value.DNS.Callback.Method = 'get'
                     DDNSForm.value.DNS.Callback.RequestBody = ""
+                    DDNSForm.value.DNS.Callback.DisableCallbackSuccessContentCheck = false
                     DDNSForm.value.DNS.Callback.CallbackSuccessContent = ["addresses updated"]
                     DDNSFormCallbackSuccessContentArea.value = 'addresses updated\n'
                     break;
@@ -2194,6 +2271,7 @@ const autocompleteCallbackForm = () => {
                     DDNSForm.value.DNS.Callback.Headers = []
                     DDNSForm.value.DNS.Callback.Method = 'get'
                     DDNSForm.value.DNS.Callback.RequestBody = ""
+                    DDNSForm.value.DNS.Callback.DisableCallbackSuccessContentCheck = false
                     DDNSForm.value.DNS.Callback.CallbackSuccessContent = ["nochg", "good #{ip}"]
                     DDNSFormCallbackSuccessContentArea.value = 'nochg\ngood #{ip}'
                     break;
