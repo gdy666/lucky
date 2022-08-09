@@ -63,7 +63,7 @@ func (pb *Porkbun) createUpdateDomain(recordType, ipAddr string, domain *ddnscor
 	var record PorkbunDomainQueryResponse
 	// 获取当前域名信息
 	err := pb.request(
-		porkbunEndpoint+fmt.Sprintf("/retrieveByNameType/%s/%s/%s", domain.DomainName, recordType, domain.GetSubDomain()),
+		porkbunEndpoint+fmt.Sprintf("/retrieveByNameType/%s/%s/%s", domain.DomainName, recordType, domain.SubDomain),
 		&PorkbunApiKey{
 			AccessKey: pb.task.DNS.ID,
 			SecretKey: pb.task.DNS.Secret,
@@ -111,9 +111,9 @@ func (pb *Porkbun) create(domain *ddnscore.Domain, recordType string, ipAddr str
 	if err == nil && response.Status == "SUCCESS" {
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		errMsg := "新增域名失败"
+		errMsg := fmt.Sprintf("新增域名失败:%v\n", response)
 		if err != nil {
-			errMsg = err.Error()
+			errMsg += err.Error()
 		}
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
@@ -135,7 +135,7 @@ func (pb *Porkbun) modify(record *PorkbunDomainQueryResponse, domain *ddnscore.D
 	var response PorkbunResponse
 
 	err := pb.request(
-		porkbunEndpoint+fmt.Sprintf("/editByNameType/%s/%s/%s", domain.DomainName, recordType, domain.GetSubDomain()),
+		porkbunEndpoint+fmt.Sprintf("/editByNameType/%s/%s/%s", domain.DomainName, recordType, domain.SubDomain),
 		&PorkbunDomainCreateOrUpdateVO{
 			PorkbunApiKey: &PorkbunApiKey{
 				AccessKey: pb.task.DNS.ID,
@@ -152,10 +152,9 @@ func (pb *Porkbun) modify(record *PorkbunDomainQueryResponse, domain *ddnscore.D
 	if err == nil && response.Status == "SUCCESS" {
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-
-		errMsg := "更新域名解析失败"
+		errMsg := fmt.Sprintf("更新域名解析失败:%v\n", response)
 		if err != nil {
-			errMsg = err.Error()
+			errMsg += err.Error()
 		}
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}

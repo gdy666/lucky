@@ -177,7 +177,7 @@
                         <el-descriptions-item label="域名">
                             <el-button color="#409eff" size="default"
                                 @click="copyDomain(domain.SubDomain, domain.DomainName)">
-                                {{ domain.SubDomain + "." + domain.DomainName }}
+                                {{ domain.SubDomain ==''?domain.DomainName:domain.SubDomain + "." + domain.DomainName }}
                             </el-button>
                         </el-descriptions-item>
 
@@ -1389,9 +1389,12 @@ const WebhookServerSelectChange = (server : string)=>{
     }
 }
 
-const copyDomain = (domain: string, SubDomain: string) => {
-    CopyTotoClipboard(domain + "." + SubDomain)
-    MessageShow('success', '域名 ' + domain + "." + SubDomain + ' 已复制到剪切板')
+const copyDomain = ( SubDomain: string,domain: string) => {
+
+    let content = SubDomain ==''?domain:SubDomain + "." + domain; 
+
+    CopyTotoClipboard(content)
+    MessageShow('success', '域名 ' + content + ' 已复制到剪切板')
 }
 
 const copyWanIP = (ip: string) => {

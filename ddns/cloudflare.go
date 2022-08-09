@@ -116,6 +116,7 @@ func (cf *Cloudflare) createUpdateDomain(recordType, ipAddr string, domain *ddns
 
 // 创建
 func (cf *Cloudflare) create(zoneID string, domain *ddnscore.Domain, recordType string, ipAddr string) {
+
 	record := &CloudflareRecord{
 		Type:    recordType,
 		Name:    domain.String(),
@@ -123,6 +124,7 @@ func (cf *Cloudflare) create(zoneID string, domain *ddnscore.Domain, recordType 
 		Proxied: false,
 		TTL:     cf.TTL,
 	}
+
 	var status CloudflareStatus
 	err := cf.request(
 		"POST",
@@ -134,8 +136,11 @@ func (cf *Cloudflare) create(zoneID string, domain *ddnscore.Domain, recordType 
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		//log.Printf("新增域名解析 %s 失败！Messages: %s", domain, status.Messages)
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
+		errMsg := fmt.Sprintf("创建域名失败:\n%v\n", status)
+		if err != nil {
+			errMsg += fmt.Sprintf(":%s", err.Error())
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 
@@ -168,9 +173,9 @@ func (cf *Cloudflare) modify(result CloudflareRecordsResp, zoneID string, domain
 			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 		} else {
 			//log.Printf("更新域名解析 %s 失败！Messages: %s", domain, status.Messages)
-			errMsg := "更新失败"
+			errMsg := fmt.Sprintf("更新域名解析失败:%v\n", status)
 			if err != nil {
-				errMsg = err.Error()
+				errMsg += err.Error()
 			}
 			domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		}

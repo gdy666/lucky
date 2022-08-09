@@ -2,6 +2,7 @@ package ddns
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -105,7 +106,11 @@ func (ali *Alidns) create(domain *ddnscore.Domain, recordType string, ipAddr str
 	if err == nil && result.RecordID != "" {
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
+		errMsg := fmt.Sprintf("创建域名失败:\n%v\n", result)
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 
@@ -136,7 +141,11 @@ func (ali *Alidns) modify(recordSelected AlidnsRecord, domain *ddnscore.Domain, 
 	if err == nil && result.RecordID != "" {
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, err.Error())
+		errMsg := fmt.Sprintf("更新域名解析失败:%v\n", result)
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 

@@ -137,8 +137,11 @@ func (hw *Huaweicloud) create(domain *ddnscore.Domain, recordType string, ipAddr
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		//log.Printf("新增域名解析 %s 失败！Status: %s", domain, result.Status)
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, result.Status)
+		errMsg := fmt.Sprintf("新增域名失败:%v\n", result)
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 
@@ -172,8 +175,11 @@ func (hw *Huaweicloud) modify(record HuaweicloudRecordsets, domain *ddnscore.Dom
 		//log.Printf("更新域名解析 %s 成功！IP: %s, 状态: %s", domain, ipAddr, result.Status)
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		//log.Printf("更新域名解析 %s 失败！Status: %s", domain, result.Status)
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, result.Status)
+		errMsg := fmt.Sprintf("更新域名解析:%v\n", result)
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 

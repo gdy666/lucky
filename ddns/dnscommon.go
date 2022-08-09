@@ -92,7 +92,7 @@ sync:
 		}()
 	}
 
-	for i, _ := range checkDoamins {
+	for i := range checkDoamins {
 
 		if d.createUpdateDomainFunc == nil {
 			log.Printf("ddns createUpdateDomainFunc undefine")
@@ -121,6 +121,22 @@ sync:
 				continue
 			}
 		}
+
+		//*********
+		// params := domain.GetCustomParams()
+		// if params.Has("recordType") {
+		// 	recordType = params.Get("recordType")
+		// }
+
+		// if params.Has("recordContent") {
+		// 	//ipAddr = params.Get("recordContent")
+		// 	recordContent := params.Get("recordContent")
+		// 	recordContent = strings.Replace(recordContent, "#{ip}", ipAddr, -1)
+		// 	ipAddr = recordContent
+
+		// 	log.Printf("recordType[%s]recordContent[%s]", recordType, recordContent)
+		// }
+		//*********
 
 		d.createUpdateDomainFunc(recordType, ipAddr, domain)
 		ddnscore.DDNSTaskInfoMapUpdateDomainInfo(d.task)

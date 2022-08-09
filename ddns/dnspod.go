@@ -93,8 +93,11 @@ func (dnspod *Dnspod) create(result DnspodRecordListResp, domain *ddnscore.Domai
 		//log.Printf("新增域名解析 %s 成功！IP: %s", domain, ipAddr)
 		domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 	} else {
-		//log.Printf("新增域名解析 %s 失败！Code: %s, Message: %s", domain, status.Status.Code, status.Status.Message)
-		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
+		errMsg := fmt.Sprintf("创建域名失败:%v\n", status)
+		if err != nil {
+			errMsg += err.Error()
+		}
+		domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 	}
 }
 
@@ -128,8 +131,11 @@ func (dnspod *Dnspod) modify(result DnspodRecordListResp, domain *ddnscore.Domai
 			//log.Printf("更新域名解析 %s 成功！IP: %s", domain, ipAddr)
 			domain.SetDomainUpdateStatus(ddnscore.UpdatedSuccess, "")
 		} else {
-			//log.Printf("更新域名解析 %s 失败！Code: %s, Message: %s", domain, status.Status.Code, status.Status.Message)
-			domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, fmt.Sprintf("Code: %s, Message: %s", status.Status.Code, status.Status.Message))
+			errMsg := fmt.Sprintf("更新域名解析失败:%v\n", status)
+			if err != nil {
+				errMsg += err.Error()
+			}
+			domain.SetDomainUpdateStatus(ddnscore.UpdatedFailed, errMsg)
 		}
 	}
 }
