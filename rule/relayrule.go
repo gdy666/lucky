@@ -1,4 +1,4 @@
-//Copyright 2022 gdy, 272288813@qq.com
+// Copyright 2022 gdy, 272288813@qq.com
 package rule
 
 import (
@@ -84,7 +84,7 @@ func GetRelayRulesFromCMD(configureList []string, options *base.RelayRuleOptions
 
 func (r *RelayRule) CreateMainConfigure() (configure string) {
 	if len(r.BalanceTargetAddressList) > 0 {
-		configure = fmt.Sprintf("%s@%s:%sto%s", r.RelayType, r.ListenIP, r.ListenPorts, strings.Join(r.BalanceTargetAddressList, ","))
+		configure = fmt.Sprintf("%s@%s:%sto%s", r.RelayType, r.ListenIP, r.ListenPorts, strings.Join(r.BalanceTargetAddressList, "|"))
 	} else {
 		if strings.Compare(r.ListenPorts, r.TargetPorts) == 0 {
 			configure = fmt.Sprintf("%s@%s:%sto%s", r.RelayType, r.ListenIP, r.ListenPorts, r.TargetIP)
@@ -161,7 +161,7 @@ func CreateRuleByConfigureAndOptions(name, configureStr string, options base.Rel
 }
 
 func createSubRuleListFromConfigure(str string) (subRelyList []SubRelayRule, proxytypeListStr, listenIP, listenPortsStr, targetIP, targetePortsStr string, targetAddressList []string, err error) {
-
+	//log.Printf("ConfigureStr:%s\n", str)
 	splitRes := strings.Split(str, "@")
 	if len(splitRes) > 2 {
 		err = fmt.Errorf("relay参数:%s格式有误!000", str)
@@ -229,13 +229,14 @@ func createSubRuleListFromConfigure(str string) (subRelyList []SubRelayRule, pro
 			return
 		}
 
-		if strings.Contains(relayConfigArray[1], ",") { //均衡负载模式
+		//log.Printf("relayConfigArray[1]:\t[%s]", relayConfigArray[1])
+
+		if strings.Contains(relayConfigArray[1], "|") { //均衡负载模式
 			if len(listenPorts) != 1 {
 				err = fmt.Errorf("均衡负载模式一条配置指定监听一个端口")
 				return
 			}
-			//targetAddressList :
-			targetAddressList = strings.Split(relayConfigArray[1], ",")
+			targetAddressList = strings.Split(relayConfigArray[1], "|")
 
 		} else {
 			targetAddress := relayConfigArray[1]
@@ -373,7 +374,7 @@ func checkProxyType(proxyTypeList []string) error {
 
 }
 
-//CheckProxyConflict 冲突检查
+// CheckProxyConflict 冲突检查
 func CheckProxyConflict(proxyList *[]base.Proxy, proxyType, listenIP string, listenPort int) error {
 	proxyMap := make(map[string]base.Proxy)
 	for i, p := range *proxyList {
@@ -402,7 +403,7 @@ func CheckProxyConflict(proxyList *[]base.Proxy, proxyType, listenIP string, lis
 	return nil
 }
 
-//getIpAndPortsFromAddress
+// getIpAndPortsFromAddress
 func getIpAndPortFromAddress(address string, needip bool, needports bool) (ip string, ports string, err error) {
 	ipAndPortIndex := strings.LastIndex(address, ":")
 
@@ -468,7 +469,7 @@ func getIpAndPortFromAddress(address string, needip bool, needports bool) (ip st
 	return
 }
 
-//portsStrToIList
+// portsStrToIList
 func portsStrToIList(portsStr string) (ports []int, err error) {
 
 	if portsStr == "" {

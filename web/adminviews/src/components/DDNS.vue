@@ -757,6 +757,15 @@
 
                                 </el-form-item>
 
+                                <div v-show="webhookSelect == 'custom'" style="color:blue;">
+                                    <el-form-item label-width="auto">
+                                        <p style="font-size:1px">
+                                            支持自定义webhook
+                                        </p>
+
+                                    </el-form-item>
+                                </div>
+
                                 <div v-show="webhookSelect == 'serverjiang'" style="color:blue;">
                                     <el-form-item label-width="auto">
                                         <p style="font-size:1px">
@@ -1255,6 +1264,10 @@ const WebhookServerList = [
     {
         value: 'weixinpro',
         label: '企业微信',
+    },
+    {
+        value:'custom',
+        label:'自定义',
     },
 ]
 
