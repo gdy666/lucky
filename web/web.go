@@ -751,7 +751,7 @@ func netinterfaces(c *gin.Context) {
 
 func webhookTest(c *gin.Context) {
 	key := c.Query("key")
-	ddnsTask := config.GetDDNSTaskByKey(key)
+	ddnsTask := ddnscore.GetDDNSTaskInfoByKey(key)
 
 	if ddnsTask == nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("找不到key对应的DDNS任务:%s", key)})
@@ -775,25 +775,23 @@ func webhookTest(c *gin.Context) {
 		return
 	}
 
-	// responseStr, err := config.WebhookTest(&ddnsTask.DDNSTask,
-	// 	request.WebhookURL,
-	// 	request.WebhookMethod,
-	// 	request.WebhookRequestBody,
-	// 	request.WebhookProxy,
-	// 	request.WebhookProxyAddr,
-	// 	request.WebhookProxyUser,
-	// 	request.WebhookProxyPassword,
-	// 	request.WebhookHeaders,
-	// 	request.WebhookSuccessContent)
-
-	//fmt.Printf("request:%s\n", request)
+	responseStr, err := ddnscore.WebhookTest(ddnsTask,
+		request.WebhookURL,
+		request.WebhookMethod,
+		request.WebhookRequestBody,
+		request.WebhookProxy,
+		request.WebhookProxyAddr,
+		request.WebhookProxyUser,
+		request.WebhookProxyPassword,
+		request.WebhookHeaders,
+		request.WebhookSuccessContent)
 
 	msg := "Webhook接口调用成功"
 	if err != nil {
 		msg = err.Error()
 	}
 
-	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": msg, "Response": "responseStr"})
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": msg, "Response": responseStr})
 }
 
 func IPRegTest(c *gin.Context) {
