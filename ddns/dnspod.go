@@ -182,7 +182,7 @@ func (dnspod *Dnspod) getRecordList(domain *ddnscore.Domain, typ string) (result
 		return
 	}
 
-	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, result)
+	err = httputils.GetAndParseJSONResponseFromHttpResponse(resp, &result)
 
 	return
 }
