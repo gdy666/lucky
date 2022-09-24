@@ -58,6 +58,7 @@ window.onpopstate = function (event){
     }
 
     if(!PageExist(location.hash)){
+        console.log("location.hash["+location.hash +"]no exist")
         location.hash ="#login"
         return 
     }

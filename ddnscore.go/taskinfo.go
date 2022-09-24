@@ -10,6 +10,7 @@ import (
 
 	"github.com/gdy666/lucky/config"
 	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
+	"github.com/gdy666/lucky/thirdlib/gdylib/netinterfaces"
 )
 
 // Ipv4Reg IPv4正则
@@ -50,7 +51,7 @@ func (d *DDNSTaskInfo) CheckIPChange() (ipAddr string, change bool) {
 func (d *DDNSTaskInfo) getIpv4Addr() (result string) {
 	// 判断从哪里获取IP
 	if d.GetType == "netInterface" {
-		result = GetIPFromNetInterface("IPv4", d.NetInterface, d.IPReg)
+		result = netinterfaces.GetIPFromNetInterface("IPv4", d.NetInterface, d.IPReg)
 		return
 	}
 
@@ -111,7 +112,7 @@ func (d *DDNSTaskInfo) getIpv4Addr() (result string) {
 func (d *DDNSTaskInfo) getIpv6Addr() (result string) {
 	// 判断从哪里获取IP
 	if d.GetType == "netInterface" {
-		result = GetIPFromNetInterface("IPv6", d.NetInterface, d.IPReg)
+		result = netinterfaces.GetIPFromNetInterface("IPv6", d.NetInterface, d.IPReg)
 		return
 	}
 

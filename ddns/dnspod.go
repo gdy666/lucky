@@ -166,6 +166,10 @@ func (dnspod *Dnspod) getRecordList(domain *ddnscore.Domain, typ string) (result
 	params.Add("sub_domain", domain.GetSubDomain())
 	params.Add("format", "json")
 
+	if !params.Has("record_line") {
+		params.Add("record_line", "默认")
+	}
+
 	client, e := dnspod.CreateHTTPClient()
 	if e != nil {
 		err = e

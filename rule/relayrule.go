@@ -8,23 +8,23 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/socketproxy"
 )
 
 type RelayRule struct {
-	Name                     string                `json:"Name"`
-	MainConfigure            string                `json:"Mainconfigure"`
-	RelayType                string                `json:"RelayType"`
-	ListenIP                 string                `json:"ListenIP"`
-	ListenPorts              string                `json:"ListenPorts"`
-	TargetIP                 string                `json:"TargetIP"`
-	TargetPorts              string                `json:"TargetPorts"`
-	BalanceTargetAddressList []string              `json:"BalanceTargetAddressList"`
-	Options                  base.RelayRuleOptions `json:"Options"`
-	SubRuleList              []SubRelayRule        `json:"SubRuleList"`
-	From                     string                `json:"From"`
-	IsEnable                 bool                  `json:"Enable"`
-	proxyList                *[]base.Proxy         `json:"-"`
+	Name                     string                       `json:"Name"`
+	MainConfigure            string                       `json:"Mainconfigure"`
+	RelayType                string                       `json:"RelayType"`
+	ListenIP                 string                       `json:"ListenIP"`
+	ListenPorts              string                       `json:"ListenPorts"`
+	TargetIP                 string                       `json:"TargetIP"`
+	TargetPorts              string                       `json:"TargetPorts"`
+	BalanceTargetAddressList []string                     `json:"BalanceTargetAddressList"`
+	Options                  socketproxy.RelayRuleOptions `json:"Options"`
+	SubRuleList              []SubRelayRule               `json:"SubRuleList"`
+	From                     string                       `json:"From"`
+	IsEnable                 bool                         `json:"Enable"`
+	proxyList                *[]socketproxy.Proxy         `json:"-"`
 }
 
 type SubRelayRule struct {
@@ -63,8 +63,8 @@ func (r *RelayRule) Disable() {
 	}
 }
 
-func GetRelayRulesFromCMD(configureList []string, options *base.RelayRuleOptions) (relayRules *[]RelayRule, err error) {
-	//proxyMap := make(map[string]base.Proxy)
+func GetRelayRulesFromCMD(configureList []string, options *socketproxy.RelayRuleOptions) (relayRules *[]RelayRule, err error) {
+	//proxyMap := make(map[string]socketproxy.Proxy)
 
 	var relayRuleList []RelayRule
 
@@ -95,7 +95,7 @@ func (r *RelayRule) CreateMainConfigure() (configure string) {
 	return configure
 }
 
-func CreateRuleByConfigureAndOptions(name, configureStr string, options base.RelayRuleOptions) (rule *RelayRule, err error) {
+func CreateRuleByConfigureAndOptions(name, configureStr string, options socketproxy.RelayRuleOptions) (rule *RelayRule, err error) {
 	var r RelayRule
 	r.Options = options
 	r.SubRuleList, r.RelayType, r.ListenIP, r.ListenPorts, r.TargetIP, r.TargetPorts, r.BalanceTargetAddressList, err = createSubRuleListFromConfigure(configureStr)
@@ -115,12 +115,12 @@ func CreateRuleByConfigureAndOptions(name, configureStr string, options base.Rel
 	// 	}
 	// }
 
-	var pl []base.Proxy
+	var pl []socketproxy.Proxy
 
 	for i := range r.SubRuleList {
 		if len(r.BalanceTargetAddressList) == 0 {
 			for j := range r.SubRuleList[i].ListenPorts {
-				p, e := base.CreateProxy(r.SubRuleList[i].ProxyType,
+				p, e := socketproxy.CreateProxy(r.SubRuleList[i].ProxyType,
 					r.SubRuleList[i].BindIP,
 					r.SubRuleList[i].TargetHost,
 					nil,
@@ -137,7 +137,7 @@ func CreateRuleByConfigureAndOptions(name, configureStr string, options base.Rel
 			continue
 		}
 
-		p, e := base.CreateProxy(r.SubRuleList[i].ProxyType,
+		p, e := socketproxy.CreateProxy(r.SubRuleList[i].ProxyType,
 			r.SubRuleList[i].BindIP,
 			r.SubRuleList[i].TargetHost,
 			&r.BalanceTargetAddressList,
@@ -375,13 +375,13 @@ func checkProxyType(proxyTypeList []string) error {
 }
 
 // CheckProxyConflict 冲突检查
-func CheckProxyConflict(proxyList *[]base.Proxy, proxyType, listenIP string, listenPort int) error {
-	proxyMap := make(map[string]base.Proxy)
+func CheckProxyConflict(proxyList *[]socketproxy.Proxy, proxyType, listenIP string, listenPort int) error {
+	proxyMap := make(map[string]socketproxy.Proxy)
 	for i, p := range *proxyList {
 		proxyMap[p.GetKey()] = (*proxyList)[i]
 	}
 
-	key := base.GetProxyKey(proxyType, listenIP, listenPort)
+	key := socketproxy.GetProxyKey(proxyType, listenIP, listenPort)
 	if _, ok := proxyMap[key]; ok {
 		return fmt.Errorf("绑定的地址和端口存在冲突！[%s]", key)
 	}

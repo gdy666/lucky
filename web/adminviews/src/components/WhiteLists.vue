@@ -127,10 +127,10 @@ const flushWhiteListlife = (index, ip, life) => {
 
 const addWhiteList = () => {
 
-    if (!isIP(addWhiteListForm.value.IP)) {
-        MessageShow("error", "IP格式有误,请检查修正后再添加")
-        return
-    }
+    // if (!isIP(addWhiteListForm.value.IP)) {
+    //     MessageShow("error", "IP格式有误,请检查修正后再添加")
+    //     return
+    // }
 
     apiFlushWhiteList(addWhiteListForm.value.IP, addWhiteListForm.value.Life).then((res) => {
         if (res.ret == 0) {

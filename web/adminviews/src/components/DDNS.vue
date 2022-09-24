@@ -4,18 +4,13 @@
         borderRadius: 'base',
     }">
 
-        <!-- <el-affix position="bottom" :offset="0" class="affix-container">
-            <el-button type="primary" @click="showAddOrAlterWhiteListDialog('add')">DDNS任务添加 <el-icon>
-                    <Plus />
-                </el-icon>
-            </el-button>
-        </el-affix> -->
+
 
         <el-scrollbar height="100%">
 
             <div class="itemradius" :style="{
                 borderRadius: 'base',
-            }" v-for="task,taskIndex in taskList">
+            }" v-for="task, taskIndex in taskList">
 
                 <el-descriptions :column="4" border>
 
@@ -39,7 +34,7 @@
                         </el-tooltip>
 
                         &nbsp;&nbsp;
-                        <el-button type="primary" @click="showAddOrAlterWhiteListDialog('alter', task)">编辑</el-button>
+                        <el-button type="primary" @click="showAddOrAlterDDNSTaskDialog('alter', task)">编辑</el-button>
                         <el-button type="danger" @click="deleteTask(task)">删除</el-button>
 
                     </el-descriptions-item>
@@ -69,7 +64,7 @@
 
                     <el-descriptions-item label="公网IP">
 
-                        <el-tooltip :placement="taskIndex==0?'bottom':'top'" effect="dark" :trigger-keys="[]"
+                        <el-tooltip :placement="taskIndex == 0 ? 'bottom' : 'top'" effect="dark" :trigger-keys="[]"
                             content="">
                             <template #content>
                                 <span v-html="getIPHistroyListHtml(task.TaskState.IPAddrHistory)"></span>
@@ -108,7 +103,7 @@
 
                         <el-descriptions-item label="WebHook 触发时间" :span="task.TaskState.WebhookCallTime == '' ? 3 : 1">
 
-                            <el-tooltip :placement="taskIndex==0?'bottom':'top'" effect="dark" :trigger-keys="[]"
+                            <el-tooltip :placement="taskIndex == 0 ? 'bottom' : 'top'" effect="dark" :trigger-keys="[]"
                                 content="">
                                 <template #content>
                                     <span
@@ -116,7 +111,7 @@
                                 </template>
                                 <el-button color="#409eff" size="default">
                                     {{ task.TaskState.WebhookCallTime == "" ? '从未触发' :
-                                    task.TaskState.WebhookCallTime
+                                            task.TaskState.WebhookCallTime
                                     }}
                                 </el-button>
                             </el-tooltip>
@@ -126,7 +121,7 @@
                         <el-descriptions-item label="WebHook 触发结果"
                             v-if="task.TaskState.WebhookCallTime == '' ? false : true"
                             :span="task.TaskState.WebhookCallErrorMsg == '' ? 2 : 1">
-                            <el-tooltip :placement="taskIndex==0?'bottom':'top'" effect="dark" :trigger-keys="[]"
+                            <el-tooltip :placement="taskIndex == 0 ? 'bottom' : 'top'" effect="dark" :trigger-keys="[]"
                                 content="">
                                 <template #content>
                                     <span
@@ -177,28 +172,28 @@
                         <el-descriptions-item label="域名">
                             <el-button color="#409eff" size="default"
                                 @click="copyDomain(domain.SubDomain, domain.DomainName)">
-                                {{ domain.SubDomain ==''?domain.DomainName:domain.SubDomain + "." + domain.DomainName }}
+                                {{ domain.SubDomain == '' ? domain.DomainName : domain.SubDomain + "." + domain.DomainName }}
                             </el-button>
                         </el-descriptions-item>
 
                         <el-descriptions-item label="同步结果">
 
-                            <el-tooltip :placement="taskIndex==0?'bottom':'top'" effect="dark" :trigger-keys="[]"
+                            <el-tooltip :placement="taskIndex == 0 ? 'bottom' : 'top'" effect="dark" :trigger-keys="[]"
                                 content="">
                                 <template #content>
                                     <span v-html="GetSyncUpdateHistroyListHtml(domain.UpdateHistroy)"></span>
 
                                 </template>
 
-                                <el-button :type="domain.UpdateStatus == '失败' ? 'danger' : task.Enable?'success':'info'"
+                                <el-button :type="domain.UpdateStatus == '失败' ? 'danger' : task.Enable ? 'success' : 'info'"
                                     size="small">
-                                    {{ task.Enable?domain.UpdateStatus:'停止同步' }}
+                                    {{ task.Enable ? domain.UpdateStatus : '停止同步' }}
                                 </el-button>
                             </el-tooltip>
                         </el-descriptions-item>
 
                         <el-descriptions-item label="最后检测时间" :span="domain.Message == '' ? 2 : 1">
-                            <el-tooltip :placement="taskIndex==0?'bottom':'top'" effect="dark" :trigger-keys="[]"
+                            <el-tooltip :placement="taskIndex == 0 ? 'bottom' : 'top'" effect="dark" :trigger-keys="[]"
                                 content="">
                                 <template #content>
                                     <span v-html="GetSyncUpdateHistroyListHtml(domain.UpdateHistroy)"></span>
@@ -226,7 +221,7 @@
         </el-scrollbar>
 
         <el-affix position="bottom" :offset="30" class="affix-container">
-            <el-button type="primary" @click="showAddOrAlterWhiteListDialog('add', null)">添加DDNS任务 <el-icon>
+            <el-button type="primary" @click="showAddOrAlterDDNSTaskDialog('add', null)">添加DDNS任务 <el-icon>
                     <Plus />
                 </el-icon>
             </el-button>
@@ -259,13 +254,13 @@
                 </el-form-item>
 
 
+
                 <div v-show="DDNSForm.Enable">
 
 
 
                     <div class="fromitemDivRadius">
                         <p>DNS服务商设置</p>
-
 
                         <div class="fromitemChildDivRadius">
 
@@ -404,7 +399,7 @@
 
                             <div v-show="DDNSForm.DNS.Callback.Server == 'other' ? false : true">
 
-                                <div v-if="DDNSForm.DNS.Callback.Server=='meibu'" style="font-size: small;">
+                                <div v-if="DDNSForm.DNS.Callback.Server == 'meibu'" style="font-size: small;">
                                     <el-tooltip content="注意:每步 IPv4和IPv6的接口不相同,免费二级域名不能同时支持IPv4和IPv6" placement="top">
                                         <el-form-item label-width="auto">
                                             <el-link type="primary" style="font-size: small;"
@@ -416,7 +411,7 @@
                                 </div>
 
 
-                                <div v-if="DDNSForm.DNS.Callback.Server=='noip'" style="font-size: small;">
+                                <div v-if="DDNSForm.DNS.Callback.Server == 'noip'" style="font-size: small;">
                                     <el-form-item label-width="auto">
                                         <el-link type="primary" style="font-size: small;" href="https://www.noip.com"
                                             target="_blank">
@@ -425,7 +420,7 @@
                                     </el-form-item>
                                 </div>
 
-                                <div v-if="DDNSForm.DNS.Callback.Server=='dynv6'" style="font-size: small;">
+                                <div v-if="DDNSForm.DNS.Callback.Server == 'dynv6'" style="font-size: small;">
                                     <el-form-item label-width="auto">
                                         <el-link type="primary" style="font-size: small;" href="https://dynv6.com/"
                                             target="_blank">
@@ -439,7 +434,7 @@
                                     </el-form-item>
                                 </div>
 
-                                <div v-if="DDNSForm.DNS.Callback.Server=='dynu'" style="font-size: small;">
+                                <div v-if="DDNSForm.DNS.Callback.Server == 'dynu'" style="font-size: small;">
                                     <el-form-item label-width="auto">
                                         <el-link type="primary" style="font-size: small;" href="https://www.dynu.com/"
                                             target="_blank">
@@ -924,22 +919,22 @@
                                 </el-tooltip>
 
 
-                                 <div v-show="!DDNSForm.WebhookDisableCallbackSuccessContentCheck">
-                                <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
-                                    <template #content>用于判断记录Webhook 接口是否成功调用<br />
-                                        多种表示成功的不同字符串请分多行写<br />
-                                        支持的变量 <br />
-                                        #{ipAddr} : 当前公网IP<br />
-                                        #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
-                                        #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
-                                        #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
-                                        #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔</template>
-                                    <el-form-item label="接口调用成功包含的字符串" label-width="auto">
-                                        <el-input v-model="DDNSFormWebhookSuccessContentArea"
-                                            :autosize="{ minRows: 3, maxRows: 5 }" type="textarea" autocomplete="off"
-                                            placeholder="" />
-                                    </el-form-item>
-                                </el-tooltip>
+                                <div v-show="!DDNSForm.WebhookDisableCallbackSuccessContentCheck">
+                                    <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
+                                        <template #content>用于判断记录Webhook 接口是否成功调用<br />
+                                            多种表示成功的不同字符串请分多行写<br />
+                                            支持的变量 <br />
+                                            #{ipAddr} : 当前公网IP<br />
+                                            #{successDomains} : 更新/添加成功的域名列表,域名之间用,号分隔<br />
+                                            #{successDomainsLine} : 更新/添加成功的域名列表,域名之间用'\n'分隔<br />
+                                            #{failedDomains} : 更新/添加失败的域名列表,域名之间用,号分隔<br />
+                                            #{failedDomainsLine} : 更新/添加失败的域名列表,域名之间用'\n'分隔</template>
+                                        <el-form-item label="接口调用成功包含的字符串" label-width="auto">
+                                            <el-input v-model="DDNSFormWebhookSuccessContentArea"
+                                                :autosize="{ minRows: 3, maxRows: 5 }" type="textarea"
+                                                autocomplete="off" placeholder="" />
+                                        </el-form-item>
+                                    </el-tooltip>
                                 </div>
 
 
@@ -996,8 +991,8 @@
                 <span class="dialog-footer">
                     <el-button @click="addDDNSDialogVisible = false">取消</el-button>
                     <el-button type="primary" @click="exeAddOrAlterDDNSOption">{{ DDNSFormOptionType == "add" ? '添加' :
-                        '修改'
-                        }}
+                            '修改'
+                    }}
                     </el-button>
                 </span>
             </template>
@@ -1042,12 +1037,12 @@ var taskList = ref([{
     NetInterface: "",
     IPReg: "",
     Domains: [""],
-    HttpClientTimeout:20,
+    HttpClientTimeout: 20,
     DNS: {
         Name: "alidns",
         ID: "",
         Secret: "",
-        ForceInterval:600,
+        ForceInterval: 600,
         ResolverDoaminCheck: false,
         DNSServerList: [''],
         HttpClientProxyType: "",
@@ -1060,7 +1055,7 @@ var taskList = ref([{
             Headers: [""],
             RequestBody: "",
             Server: "",
-            DisableCallbackSuccessContentCheck:false,
+            DisableCallbackSuccessContentCheck: false,
             CallbackSuccessContent: [""]
         },
 
@@ -1070,7 +1065,7 @@ var taskList = ref([{
     WebhookMethod: "",
     WebhookHeaders: [""],
     WebhookRequestBody: "",
-    WebhookDisableCallbackSuccessContentCheck:false,
+    WebhookDisableCallbackSuccessContentCheck: false,
     WebhookSuccessContent: [""],
     WebhookProxy: "",
     WebhookProxyAddr: "",
@@ -1082,23 +1077,24 @@ var taskList = ref([{
         WebhookCallTime: "",
         WebhookCallResult: false,
         WebhookCallErrorMsg: "",
-        IPAddrHistory:[{IPaddr:"",RecordTime:""}],
-        WebhookCallHistroy:[{CallTime:"",CallResult:""}],
+        IPAddrHistory: [{ IPaddr: "", RecordTime: "" }],
+        WebhookCallHistroy: [{ CallTime: "", CallResult: "" }],
         IpAddr: "",
-        Domains: [{ 
+        Domains: [{
             DomainName: "",
-             SubDomain: "", 
-             UpdateStatus: "", 
-             LastUpdateStatusTime: "", 
-             Message: "",
-             UpdateHistroy:[{UpdateStatus:"",UpdateTime:""}] }]
+            SubDomain: "",
+            UpdateStatus: "",
+            LastUpdateStatusTime: "",
+            Message: "",
+            UpdateHistroy: [{ UpdateStatus: "", UpdateTime: "" }]
+        }]
     },
 }]);
 taskList.value.splice(0, 1)
 
 
 const rhtml = ref("")
-const webhookSelect= ref("")
+const webhookSelect = ref("")
 const WebhookServerListArea = ref("")
 
 rhtml.value = ` <el-link type="info">info</el-link>`
@@ -1266,8 +1262,8 @@ const WebhookServerList = [
         label: '企业微信',
     },
     {
-        value:'custom',
-        label:'自定义',
+        value: 'custom',
+        label: '自定义',
     },
 ]
 
@@ -1320,91 +1316,91 @@ const CallbackMethodList = [
 ]
 
 
-const getIPHistroyListHtml = (ipHistroy)=>{
+const getIPHistroyListHtml = (ipHistroy) => {
     let res = ""
 
-    for (let i in ipHistroy){
-        let ipText = ipHistroy[i].IPaddr; 
-        if (ipText==""){
+    for (let i in ipHistroy) {
+        let ipText = ipHistroy[i].IPaddr;
+        if (ipText == "") {
             ipText = "获取IP失败"
         }
 
-        res += ipHistroy[i].RecordTime +"&nbsp; &nbsp; &nbsp;"+ ipText  + '<br />'
+        res += ipHistroy[i].RecordTime + "&nbsp; &nbsp; &nbsp;" + ipText + '<br />'
     }
 
     return res
 }
 
-const GetSyncUpdateHistroyListHtml = (updateHistroy)=>{
-        let res = ""
+const GetSyncUpdateHistroyListHtml = (updateHistroy) => {
+    let res = ""
 
-    for (let i in updateHistroy){
-        let state = updateHistroy[i].UpdateStatus; 
+    for (let i in updateHistroy) {
+        let state = updateHistroy[i].UpdateStatus;
 
-        res += updateHistroy[i].UpdateTime +"&nbsp; &nbsp; &nbsp;"+ state  + '<br />'
+        res += updateHistroy[i].UpdateTime + "&nbsp; &nbsp; &nbsp;" + state + '<br />'
     }
 
     return res
 }
 
-const getWebhookCallHistroyListHtml = (histroy)=>{
+const getWebhookCallHistroyListHtml = (histroy) => {
     let res = "仅记录程序本次启动以来的Webhook调用记录<br />"
 
-    for (let i in histroy){
-        let result = histroy[i].CallResult; 
-        res += histroy[i].CallTime +"&nbsp; &nbsp; &nbsp;"+ result  + '<br />'
+    for (let i in histroy) {
+        let result = histroy[i].CallResult;
+        res += histroy[i].CallTime + "&nbsp; &nbsp; &nbsp;" + result + '<br />'
     }
 
     return res
 }
 
-const WebhookServerSelectChange = (server : string)=>{
-    switch (server){
+const WebhookServerSelectChange = (server: string) => {
+    switch (server) {
         case "dingding":
             let dingding_msg = {
-                msgtype:"markdown",
-                markdown:{
-                    title:"DDNS域名同步反馈",
-                    text:'#### DDNS域名同步反馈 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomainsLine}\n - 域名更新失败列表：#{failedDomainsLine}\n - Webhook触发时间:  \n  #{time}'
+                msgtype: "markdown",
+                markdown: {
+                    title: "DDNS域名同步反馈",
+                    text: '#### DDNS域名同步反馈 \n - IP地址：#{ipAddr} \n - 域名更新成功列表：#{successDomainsLine}\n - 域名更新失败列表：#{failedDomainsLine}\n - Webhook触发时间:  \n  #{time}'
                 },
-                }
-            WebhookServerListArea.value = JSON.stringify(dingding_msg,null,2);
+            }
+            WebhookServerListArea.value = JSON.stringify(dingding_msg, null, 2);
             break;
         case 'feishu':
             let feishu_msg = {
-                msg_type:"post",
-                content:{
-                    post:{
-                        zh_cn:{
-                            title:"DDNS域名同步反馈",
-                            content:[
-                                [{tag:"text",text:"IP地址：#{ipAddr}"}],
-                                [{tag:"text",text:"域名更新成功列表：#{successDomainsLine}"}],
-                                [{tag:"text",text:"域名更新失败列表：#{failedDomainsLine}"}],
-                                [{tag:"text",text:"Webhook触发时间: \n#{time}"}],
-                                ]
+                msg_type: "post",
+                content: {
+                    post: {
+                        zh_cn: {
+                            title: "DDNS域名同步反馈",
+                            content: [
+                                [{ tag: "text", text: "IP地址：#{ipAddr}" }],
+                                [{ tag: "text", text: "域名更新成功列表：#{su.ccessDomainsLine}" }],
+                                [{ tag: "text", text: "域名更新失败列表：#{failedDomainsLine}" }],
+                                [{ tag: "text", text: "Webhook触发时间: \n#{time}" }],
+                            ]
                         }
                     }
                 }
             }
-            WebhookServerListArea.value= JSON.stringify(feishu_msg,null,2)
+            WebhookServerListArea.value = JSON.stringify(feishu_msg, null, 2)
             break
         case 'weixinpro':
             let weixin_msg = {
-                msgtype:"markdown",
-                markdown:{
-                    content:'#### DDNS域名同步反馈 \n##### IP地址：\n#{ipAddr} \n##### 域名更新成功列表：\n#{successDomainsLine}\n##### 域名更新失败列表：\n#{failedDomainsLine}\n##### Webhook触发时间: \n#{time}'
+                msgtype: "markdown",
+                markdown: {
+                    content: '#### DDNS域名同步反馈 \n##### IP地址：\n#{ipAddr} \n##### 域名更新成功列表：\n#{successDomainsLine}\n##### 域名更新失败列表：\n#{failedDomainsLine}\n##### Webhook触发时间: \n#{time}'
                 }
             }
-            WebhookServerListArea.value= JSON.stringify(weixin_msg,null,2)
+            WebhookServerListArea.value = JSON.stringify(weixin_msg, null, 2)
             break
         default:
     }
 }
 
-const copyDomain = ( SubDomain: string,domain: string) => {
+const copyDomain = (SubDomain: string, domain: string) => {
 
-    let content = SubDomain ==''?domain:SubDomain + "." + domain; 
+    let content = SubDomain == '' ? domain : SubDomain + "." + domain;
 
     CopyTotoClipboard(content)
     MessageShow('success', '域名 ' + content + ' 已复制到剪切板')
@@ -1581,12 +1577,12 @@ const DDNSForm = ref(
         NetInterface: "",
         IPReg: "",
         Domains: [""],
-        HttpClientTimeout:60,
+        HttpClientTimeout: 60,
         DNS: {
             Name: "alidns",
             ID: "",
             Secret: "",
-            ForceInterval:3600,
+            ForceInterval: 3600,
             ResolverDoaminCheck: false,
             DNSServerList: [""],
             HttpClientProxyType: "",
@@ -1599,17 +1595,17 @@ const DDNSForm = ref(
                 Headers: [""],
                 RequestBody: "",
                 Server: "",
-                DisableCallbackSuccessContentCheck:false,
+                DisableCallbackSuccessContentCheck: false,
                 CallbackSuccessContent: [""],
             },
         },
         WebhookEnable: false,
-        WebhookCallOnGetIPfail:false,
+        WebhookCallOnGetIPfail: false,
         WebhookURL: "",
         WebhookMethod: "",
         WebhookHeaders: [""],
         WebhookRequestBody: "",
-        WebhookDisableCallbackSuccessContentCheck:false,
+        WebhookDisableCallbackSuccessContentCheck: false,
         WebhookSuccessContent: [""],
         WebhookProxy: "",
         WebhookProxyAddr: "",
@@ -1629,12 +1625,12 @@ const preDDNSFrom = ref(
         NetInterface: "",
         IPReg: "",
         Domains: [""],
-        HttpClientTimeout:20,
+        HttpClientTimeout: 20,
         DNS: {
             Name: "alidns",
             ID: "",
             Secret: "",
-            ForceInterval:3600,
+            ForceInterval: 3600,
             ResolverDoaminCheck: false,
             DNSServerList: [''],
             HttpClientProxyType: "",
@@ -1647,17 +1643,17 @@ const preDDNSFrom = ref(
                 Headers: [""],
                 RequestBody: "",
                 Server: "",
-                DisableCallbackSuccessContentCheck:false,
+                DisableCallbackSuccessContentCheck: false,
                 CallbackSuccessContent: [""],
             },
         },
         WebhookEnable: false,
-        WebhookCallOnGetIPfail:false,
+        WebhookCallOnGetIPfail: false,
         WebhookURL: "",
         WebhookMethod: "",
         WebhookHeaders: [""],
         WebhookRequestBody: "",
-        WebhookDisableCallbackSuccessContentCheck:false,
+        WebhookDisableCallbackSuccessContentCheck: false,
         WebhookSuccessContent: [""],
         WebhookProxy: "",
         WebhookProxyAddr: "",
@@ -1678,10 +1674,10 @@ const DDNSFormOptionType = ref("")
 const checkIPv4URLList = ["https://4.ipw.cn", "http://v4.ip.zxinc.org/getip", "https://myip4.ipip.net", "https://www.taobao.com/help/getip.php", "https://ddns.oray.com/checkip", "https://ip.3322.net", "https://v4.myip.la"]
 const checkIPv6URLList = ["https://6.ipw.cn", "https://ipv6.ddnspod.com", "http://v6.ip.zxinc.org/getip", "https://speed.neu6.edu.cn/getIP.php", "https://v6.ident.me", "https://v6.myip.la"]
 
-const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
+const showAddOrAlterDDNSTaskDialog = (optionType: string, task: any) => {
     //console.log("optionType fuck:" + optionType)
 
-    webhookSelect.value=""
+    webhookSelect.value = ""
 
     queryNetinterfaces()
     DDNSFormOptionType.value = optionType
@@ -1697,35 +1693,35 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         DDNSForm.value.IPReg = ""
         DDNSForm.value.Domains = [""]
         DDNSForm.value.HttpClientTimeout = 20,
-        DDNSForm.value.DNS = {
-            Name: "alidns",
-            ID: "",
-            Secret: "",
-            ForceInterval:3600,
-            ResolverDoaminCheck: true,
-            DNSServerList: [],
-            HttpClientProxyType: "",
-            HttpClientProxyAddr: "",
-            HttpClientProxyUser: "",
-            HttpClientProxyPassword: "",
-            Callback: {
-                URL: "",
-                Method: "get",
-                Headers: [""],
-                RequestBody: "",
-                Server: "other",
-                DisableCallbackSuccessContentCheck:false,
-                CallbackSuccessContent: [],
+            DDNSForm.value.DNS = {
+                Name: "alidns",
+                ID: "",
+                Secret: "",
+                ForceInterval: 3600,
+                ResolverDoaminCheck: true,
+                DNSServerList: [],
+                HttpClientProxyType: "",
+                HttpClientProxyAddr: "",
+                HttpClientProxyUser: "",
+                HttpClientProxyPassword: "",
+                Callback: {
+                    URL: "",
+                    Method: "get",
+                    Headers: [""],
+                    RequestBody: "",
+                    Server: "other",
+                    DisableCallbackSuccessContentCheck: false,
+                    CallbackSuccessContent: [],
+                }
             }
-        }
         DDNSForm.value.WebhookEnable = false
         DDNSForm.value.WebhookCallOnGetIPfail = false
         DDNSForm.value.WebhookURL = ""
         DDNSForm.value.WebhookMethod = "get"
         DDNSForm.value.WebhookHeaders = []
         DDNSForm.value.WebhookRequestBody = ""
-        DDNSForm.value.WebhookDisableCallbackSuccessContentCheck=false,
-        DDNSForm.value.WebhookSuccessContent = []
+        DDNSForm.value.WebhookDisableCallbackSuccessContentCheck = false,
+            DDNSForm.value.WebhookSuccessContent = []
         DDNSForm.value.WebhookProxy = ""
         DDNSForm.value.WebhookProxyAddr = ""
         DDNSForm.value.WebhookProxyUser = ""
@@ -1751,35 +1747,35 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
         preDDNSFrom.value.IPReg = ""
         preDDNSFrom.value.Domains = [""]
         preDDNSFrom.value.HttpClientTimeout = 20,
-        preDDNSFrom.value.DNS = {
-            Name: "alidns",
-            ID: "",
-            Secret: "",
-            ForceInterval:3600,
-            ResolverDoaminCheck: true,
-            DNSServerList: [],
-            HttpClientProxyType: "",
-            HttpClientProxyAddr: "",
-            HttpClientProxyUser: "",
-            HttpClientProxyPassword: "",
-            Callback: {
-                URL: "",
-                Method: "get",
-                Headers: [""],
-                RequestBody: "",
-                DisableCallbackSuccessContentCheck:false,
-                CallbackSuccessContent: [],
-                Server: "other",
+            preDDNSFrom.value.DNS = {
+                Name: "alidns",
+                ID: "",
+                Secret: "",
+                ForceInterval: 3600,
+                ResolverDoaminCheck: true,
+                DNSServerList: [],
+                HttpClientProxyType: "",
+                HttpClientProxyAddr: "",
+                HttpClientProxyUser: "",
+                HttpClientProxyPassword: "",
+                Callback: {
+                    URL: "",
+                    Method: "get",
+                    Headers: [""],
+                    RequestBody: "",
+                    DisableCallbackSuccessContentCheck: false,
+                    CallbackSuccessContent: [],
+                    Server: "other",
+                }
             }
-        }
         preDDNSFrom.value.WebhookEnable = false
         preDDNSFrom.value.WebhookCallOnGetIPfail = false
         preDDNSFrom.value.WebhookURL = ""
         preDDNSFrom.value.WebhookMethod = "get"
         preDDNSFrom.value.WebhookHeaders = []
         preDDNSFrom.value.WebhookRequestBody = ""
-        preDDNSFrom.value.WebhookDisableCallbackSuccessContentCheck=false,
-        preDDNSFrom.value.WebhookSuccessContent = []
+        preDDNSFrom.value.WebhookDisableCallbackSuccessContentCheck = false,
+            preDDNSFrom.value.WebhookSuccessContent = []
         preDDNSFrom.value.WebhookProxy = ""
         preDDNSFrom.value.WebhookProxyAddr = ""
         preDDNSFrom.value.WebhookProxyUser = ""
@@ -1800,7 +1796,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
             Name: task.DNS.Name,
             ID: task.DNS.ID,
             Secret: task.DNS.Secret,
-            ForceInterval:task.DNS.ForceInterval,
+            ForceInterval: task.DNS.ForceInterval,
             ResolverDoaminCheck: task.DNS.ResolverDoaminCheck,
             DNSServerList: task.DNS.DNSServerList,
             HttpClientProxyType: task.DNS.HttpClientProxyType,
@@ -1813,7 +1809,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Headers: task.DNS.Callback.Headers,
                 RequestBody: task.DNS.Callback.RequestBody,
                 Server: task.DNS.Callback.Server,
-                DisableCallbackSuccessContentCheck:task.DNS.Callback.DisableCallbackSuccessContentCheck,
+                DisableCallbackSuccessContentCheck: task.DNS.Callback.DisableCallbackSuccessContentCheck,
                 CallbackSuccessContent: task.DNS.Callback.CallbackSuccessContent
             }
         }
@@ -1852,7 +1848,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
             Name: task.DNS.Name,
             ID: task.DNS.ID,
             Secret: task.DNS.Secret,
-            ForceInterval:task.DNS.ForceInterval,
+            ForceInterval: task.DNS.ForceInterval,
             ResolverDoaminCheck: task.DNS.ResolverDoaminCheck,
             DNSServerList: task.DNS.DNSServerList,
             HttpClientProxyType: task.DNS.HttpClientProxyType,
@@ -1865,7 +1861,7 @@ const showAddOrAlterWhiteListDialog = (optionType: string, task: any) => {
                 Headers: task.DNS.Callback.Headers,
                 RequestBody: task.DNS.Callback.RequestBody,
                 CallbackSuccessContent: task.DNS.Callback.CallbackSuccessContent,
-                DisableCallbackSuccessContentCheck:task.DNS.Callback.DisableCallbackSuccessContentCheck,
+                DisableCallbackSuccessContentCheck: task.DNS.Callback.DisableCallbackSuccessContentCheck,
                 Server: task.DNS.Callback.Server,
             }
         }
@@ -2178,11 +2174,12 @@ const checkDDNSFormAvalid = () => {
 
 
     } else {
-        data.DNS.Callback = { 
-            URL: "", 
-            Method: "", 
-            Headers: [], 
-            RequestBody: "", Server: "", CallbackSuccessContent: [],DisableCallbackSuccessContentCheck:false }
+        data.DNS.Callback = {
+            URL: "",
+            Method: "",
+            Headers: [],
+            RequestBody: "", Server: "", CallbackSuccessContent: [], DisableCallbackSuccessContentCheck: false
+        }
     }
 
     if (data.WebhookEnable) {
@@ -2213,7 +2210,7 @@ const checkDNSData = (dns: any) => {
                 return "Callback 接口地址不能为空"
             }
 
-            if (!dns.Callback.DisableCallbackSuccessContentCheck && dns.Callback.CallbackSuccessContent.length==0){
+            if (!dns.Callback.DisableCallbackSuccessContentCheck && dns.Callback.CallbackSuccessContent.length == 0) {
                 return "接口调用成功包含的字符串不能为空,如果要指定为空请禁用检测"
             }
 

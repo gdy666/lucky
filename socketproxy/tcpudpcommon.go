@@ -1,5 +1,5 @@
-//Copyright 2022 gdy, 272288813@qq.com
-package base
+// Copyright 2022 gdy, 272288813@qq.com
+package socketproxy
 
 import (
 	"fmt"
@@ -116,7 +116,6 @@ func (p *TCPUDPProxyCommonConf) GetListentAddress() string {
 		} else {
 			p.listentAddress = fmt.Sprintf("%s:%d", p.listenIP, p.listenPort)
 		}
-
 	}
 	return p.listentAddress
 }

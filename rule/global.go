@@ -1,12 +1,12 @@
-//Copyright 2022 gdy, 272288813@qq.com
+// Copyright 2022 gdy, 272288813@qq.com
 package rule
 
 import (
 	"fmt"
 	"sync"
 
-	"github.com/gdy666/lucky/base"
 	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/socketproxy"
 )
 
 var globalRelayRules *[]RelayRule
@@ -177,14 +177,14 @@ func EnableAllRelayRule() error {
 	}
 
 	for i := range *globalRelayRules {
-		if GetGlobalEnableProxyCount()+(*globalRelayRules)[i].GetProxyCount() <= base.GetGlobalMaxProxyCount() {
+		if GetGlobalEnableProxyCount()+(*globalRelayRules)[i].GetProxyCount() <= socketproxy.GetGlobalMaxProxyCount() {
 			if (*globalRelayRules)[i].From == "cmd" || ((*globalRelayRules)[i].From == "configureFile" && (*globalRelayRules)[i].IsEnable) {
 				(*globalRelayRules)[i].Enable()
 			}
 			continue
 		}
 
-		if GetGlobalEnableProxyCount()+(*globalRelayRules)[i].GetProxyCount() > base.DEFAULT_MAX_PROXY_COUNT {
+		if GetGlobalEnableProxyCount()+(*globalRelayRules)[i].GetProxyCount() > socketproxy.DEFAULT_MAX_PROXY_COUNT {
 			if err == nil {
 				err = fmt.Errorf("\n\t超出代理数最大限制,规则[%s]未启用", (*globalRelayRules)[i].MainConfigure)
 			} else {
@@ -245,7 +245,7 @@ func DeleteRuleSlice(a []RelayRule, deleteIndex int) []RelayRule {
 	return a[:j]
 }
 
-//syncRuleListToConfigure 同步规则列表到配置
+// syncRuleListToConfigure 同步规则列表到配置
 func syncRuleListToConfigure() error {
 	var ruleList []config.ConfigureRelayRule
 	for i := range *globalRelayRules {

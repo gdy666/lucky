@@ -3,5 +3,5 @@
 
 package main
 
-func RunAdminWeb(listenPort int) {
+func RunAdminWeb(listenPort int, logMaxSize int) {
 }

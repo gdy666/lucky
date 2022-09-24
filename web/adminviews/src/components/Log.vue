@@ -44,11 +44,15 @@ function queryLastlogs() {
         }
 
         if (res.logs!=null && res.logs.length > 0) {
-            if (res.logs[0].timestamp<=preLogTimestamp){
-                return 
-            }
+            // if (res.logs[0].timestamp!=preLogTimestamp){
+            //     console.log("fuckkkk")
+            //     return 
+            // }
+            
 
             preLogTimestamp = res.logs[res.logs.length - 1].timestamp
+            console.log("fff "+res.logs[res.logs.length - 1].log)
+            console.log("追加日志 "+preLogTimestamp)
             for(var i=0;i<res.logs.length;i++){
                 weblogsContent.value += res.logs[i].log +"\n"
             }
@@ -94,7 +98,8 @@ onUnmounted(()=>{
     border: 10px;
     overflow-y: auto;
     overflow-x: auto;
-    white-space: pre;
+    white-space: pre-wrap;
+    word-wrap:break-word;
 }
 
 

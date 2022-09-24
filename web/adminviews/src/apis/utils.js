@@ -338,3 +338,69 @@ export function apiGetConfigure() {
 		params:{_:new Date().valueOf()}
 	})
 }
+
+
+export function apiAddReverseProxyRule(data) {
+    return httpRequest({
+		url: '/api/reverseproxyrule',
+		method: 'post',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiGeReverseProxyRuleList() {
+    return httpRequest({
+		url: '/api/reverseproxyrules',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}
+
+export function apiAlterReverseProxyRule(data) {
+    return httpRequest({
+		url: '/api/reverseproxyrule',
+		method: 'put',
+		headers:{'Authorization':GetToken()},
+		data:data,
+		params:{_:new Date().valueOf()}
+	})
+}
+
+export function apiDeleteReverseProxyRule(ruleKey) {
+    return httpRequest({
+		url: '/api/reverseproxyrule',
+		method: 'delete',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:ruleKey}
+	})
+}
+
+export function apiReverseProxyRuleEnable(ruleKey,proxyKey,enable) {
+    return httpRequest({
+		url: '/api/reverseproxyrule/enable',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{
+			_:new Date().valueOf(),
+			enable:enable,
+			ruleKey:ruleKey,
+			proxyKey:proxyKey}
+	})
+}
+
+
+export function apiReverseProxyRuleLogs(ruleKey,proxyKey,pageSize,page) {
+    return httpRequest({
+		url: '/api/reverseproxyrule/logs',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{
+			_:new Date().valueOf(),
+			ruleKey:ruleKey,
+			proxyKey:proxyKey,
+			pageSize:pageSize,
+			page:page}
+	})
+}

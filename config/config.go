@@ -10,7 +10,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gdy666/lucky/base"
+	"github.com/gdy666/lucky/socketproxy"
 	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 )
@@ -18,6 +18,9 @@ import (
 const defaultAdminAccount = "666"
 const defaultAdminPassword = "666"
 const defaultAdminListenPort = 16601
+const defaultLogSize = 2048
+const minLogSize = 1024
+const maxLogSize = 40960
 
 var runMode = "prod"
 var version = "0.0.0"
@@ -41,10 +44,10 @@ func FlushLoginRandomKey() {
 }
 
 type ConfigureRelayRule struct {
-	Name         string                `json:"Name"`
-	Configurestr string                `json:"Configurestr"`
-	Enable       bool                  `json:"Enable"`
-	Options      base.RelayRuleOptions `json:"Options"`
+	Name         string                       `json:"Name"`
+	Configurestr string                       `json:"Configurestr"`
+	Enable       bool                         `json:"Enable"`
+	Options      socketproxy.RelayRuleOptions `json:"Options"`
 }
 
 type BaseConfigure struct {
@@ -54,15 +57,17 @@ type BaseConfigure struct {
 	AdminPassword        string `json:"AdminPassword"`        //登录密码
 	AllowInternetaccess  bool   `json:"AllowInternetaccess"`  //允许外网访问
 	GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大连接数
+	LogMaxSize           int    `json:"LogMaxSize"`           //日志记录最大条数
 }
 
 type ProgramConfigure struct {
-	BaseConfigure      BaseConfigure        `json:"BaseConfigure"`
-	RelayRuleList      []ConfigureRelayRule `json:"RelayRuleList"`
-	WhiteListConfigure WhiteListConfigure   `json:"WhiteListConfigure"`
-	BlackListConfigure BlackListConfigure   `json:"BlackListConfigure"`
-	DDNSConfigure      DDNSConfigure        `json:"DDNSConfigure"` //DDNS 参数设置
-	DDNSTaskList       []DDNSTask           `json:"DDNSTaskList"`
+	BaseConfigure        BaseConfigure        `json:"BaseConfigure"`
+	RelayRuleList        []ConfigureRelayRule `json:"RelayRuleList"`
+	WhiteListConfigure   WhiteListConfigure   `json:"WhiteListConfigure"`
+	BlackListConfigure   BlackListConfigure   `json:"BlackListConfigure"`
+	DDNSConfigure        DDNSConfigure        `json:"DDNSConfigure"`        //DDNS 参数设置
+	DDNSTaskList         []DDNSTask           `json:"DDNSTaskList"`         //DDNS任务列表
+	ReverseProxyRuleList []ReverseProxyRule   `json:"ReverseProxyRuleList"` //反向代理规则列表
 }
 
 var programConfigureMutex sync.RWMutex
@@ -147,8 +152,14 @@ func SetBaseConfigure(conf *BaseConfigure) error {
 	defer programConfigureMutex.Unlock()
 	programConfigure.BaseConfigure = *conf
 
-	base.SetGlobalMaxConnections(conf.GlobalMaxConnections)
-	base.SetGlobalMaxProxyCount(conf.ProxyCountLimit)
+	socketproxy.SetGlobalMaxConnections(conf.GlobalMaxConnections)
+	socketproxy.SetGlobalMaxProxyCount(conf.ProxyCountLimit)
+
+	if conf.LogMaxSize < minLogSize {
+		conf.LogMaxSize = minLogSize
+	} else if conf.LogMaxSize > maxLogSize {
+		conf.LogMaxSize = maxLogSize
+	}
 
 	return Save()
 }
@@ -190,15 +201,21 @@ func Read(filePath string) (err error) {
 	}
 
 	if pc.BaseConfigure.GlobalMaxConnections <= 0 {
-		pc.BaseConfigure.GlobalMaxConnections = base.DEFAULT_GLOBAL_MAX_CONNECTIONS
+		pc.BaseConfigure.GlobalMaxConnections = socketproxy.DEFAULT_GLOBAL_MAX_CONNECTIONS
 	}
 
 	if pc.BaseConfigure.ProxyCountLimit <= 0 {
-		pc.BaseConfigure.ProxyCountLimit = base.DEFAULT_MAX_PROXY_COUNT
+		pc.BaseConfigure.ProxyCountLimit = socketproxy.DEFAULT_MAX_PROXY_COUNT
 	}
 
 	if pc.BaseConfigure.AdminWebListenPort <= 0 {
 		pc.BaseConfigure.AdminWebListenPort = 16601
+	}
+
+	if pc.BaseConfigure.LogMaxSize < minLogSize {
+		pc.BaseConfigure.LogMaxSize = minLogSize
+	} else if pc.BaseConfigure.LogMaxSize > maxLogSize {
+		pc.BaseConfigure.LogMaxSize = maxLogSize
 	}
 
 	programConfigure = pc
@@ -273,7 +290,8 @@ func loadDefaultConfigure(
 		AdminAccount:         defaultAdminAccount,
 		AdminPassword:        defaultAdminPassword,
 		ProxyCountLimit:      proxyCountLimit,
-		AllowInternetaccess:  false}
+		AllowInternetaccess:  false,
+		LogMaxSize:           defaultLogSize}
 
 	whiteListConfigure := WhiteListConfigure{BaseConfigure: WhiteListBaseConfigure{ActivelifeDuration: 36, BasicAccount: defaultAdminAccount, BasicPassword: defaultAdminPassword}}
 
@@ -282,11 +300,11 @@ func loadDefaultConfigure(
 	pc.WhiteListConfigure = whiteListConfigure
 
 	if pc.BaseConfigure.GlobalMaxConnections <= 0 {
-		pc.BaseConfigure.GlobalMaxConnections = base.DEFAULT_GLOBAL_MAX_CONNECTIONS
+		pc.BaseConfigure.GlobalMaxConnections = socketproxy.DEFAULT_GLOBAL_MAX_CONNECTIONS
 	}
 
 	if pc.BaseConfigure.ProxyCountLimit <= 0 {
-		pc.BaseConfigure.ProxyCountLimit = base.DEFAULT_MAX_PROXY_COUNT
+		pc.BaseConfigure.ProxyCountLimit = socketproxy.DEFAULT_MAX_PROXY_COUNT
 	}
 
 	if pc.BaseConfigure.AdminWebListenPort <= 0 {

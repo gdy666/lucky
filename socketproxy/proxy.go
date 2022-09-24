@@ -1,5 +1,5 @@
-//Copyright 2022 gdy, 272288813@qq.com
-package base
+// Copyright 2022 gdy, 272288813@qq.com
+package socketproxy
 
 import (
 	"errors"

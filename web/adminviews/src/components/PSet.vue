@@ -31,6 +31,10 @@
                         <el-input v-model="form.AdminPassword" placeholder="管理登录密码" autocomplete="off" />
                     </el-form-item>
 
+                    <el-form-item label="日志记录最大条数" id="logMaxSize">
+                        <el-input-number v-model="form.LogMaxSize" autocomplete="off" :min="1024" :max="40960" />
+                    </el-form-item>
+
 
                     <el-form-item label="全局最大端口代理数量" id="proxyCountLimit">
                         <el-input-number v-model="form.ProxyCountLimit" autocomplete="off" :min="1" :max="1024" />
@@ -150,6 +154,7 @@ const rawData = {
     ProxyCountLimit: 1,
     GlobalMaxConnections: 1,
     AllowInternetaccess: false,
+    LogMaxSize:1024,
 }
 
 const form = ref(rawData)
@@ -286,8 +291,6 @@ onMounted(() => {
     margin: 0 auto;
     width: fit-content;
     padding: 15px;
-
-
 }
 
 #adminListen {

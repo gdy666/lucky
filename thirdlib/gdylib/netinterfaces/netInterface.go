@@ -1,4 +1,4 @@
-package ddnscore
+package netinterfaces
 
 import (
 	"log"
@@ -119,7 +119,7 @@ func GetIPFromNetInterface(ipType, netinterface, ipreg string) string {
 	for i := range addressList {
 		matched, err := regexp.MatchString(ipreg, addressList[i])
 		if matched && err == nil {
-			log.Printf("正则匹配上")
+			//log.Printf("正则匹配上")
 			return addressList[i]
 		}
 	}

@@ -1,25 +1,26 @@
-package web
+package ginutils
 
 import (
+	"io/fs"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 )
 
-func HandlerStaticFiles() gin.HandlerFunc {
-	fileServer := http.FileServer(http.FS(stafs))
+func HandlerStaticFiles(files fs.FS) gin.HandlerFunc {
+	fileServer := http.FileServer(http.FS(files))
 	return func(c *gin.Context) {
-		staticFile := isStaticFile(http.FS(stafs), c.Request.URL.Path, true)
+		staticFile := isStaticFile(http.FS(files), c.Request.URL.Path, true)
 		if staticFile {
 			fileServer.ServeHTTP(c.Writer, c.Request)
 			c.Abort()
+			return
 		}
 		c.Next()
 	}
 }
 
-//
 func isStaticFile(fs http.FileSystem, name string, redirect bool) (isFile bool) {
 	const indexPage = "/index.html"
 	if strings.HasSuffix(name, indexPage) {

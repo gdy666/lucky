@@ -9,8 +9,8 @@ import (
 	"log"
 )
 
-func RunAdminWeb(listenPort int) {
+func RunAdminWeb(listenPort, logMaxSize int) {
 	listen := fmt.Sprintf(":%d", listenPort)
-	go web.RunAdminWeb(listen)
+	go web.RunAdminWeb(listen, logMaxSize)
 	log.Printf("AdminWeb listen on %s", listen)
 }

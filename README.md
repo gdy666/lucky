@@ -40,6 +40,13 @@
             - 其它细节功能自己慢慢发现...
             - 没有文档,后台各处的提示信息已经足够多.
             - 支持的DNS服务商和DDNS-GO一样,有Alidns(阿里云),百度云,Cloudflare,Dnspod(腾讯云),华为云.自定义(Callback)内置有每步,No-IP,Dynv6,Dynu模版,一键填充,仅需修改相应用户密码或者token即可快速接入.
+    - 3.Http反向代理
+            - 支持HttpBasic认证  
+            - 支持IP黑白名单
+            - 支持UserAgent黑白名单
+            - 日志记录最近访问情况
+            - 一键开关子规则
+            - 前端域名与后端地址 支持一对一,一对多(均衡负载),多对多(下一级反向代理)
 
 - 将要实现的功能
     - 有建议可联系作者.
@@ -154,6 +161,11 @@
 ![](./previews/webhookhistroy.png)
 
 ![](./previews/domainsync.png)
+
+#### Http反向代理
+![](./previews/reverseproxy.png)
+
+
 
 
 

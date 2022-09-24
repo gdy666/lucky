@@ -22,7 +22,7 @@ func GetAppInfo() *AppInfo {
 }
 
 func InitAppInfo(version, date string) {
-	appInfo.AppName = "Lucky(大吉)"
+	appInfo.AppName = "Lucky"
 	appInfo.Version = version
 	appInfo.Date = date
 	appInfo.OS = runtime.GOOS

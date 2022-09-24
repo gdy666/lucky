@@ -25,6 +25,7 @@
             <BlackLists v-if="global.currentPage.value=='#blacklists'?true:false"></BlackLists>
             <DDNS v-if="global.currentPage.value=='#ddnstasklist'?true:false"></DDNS>
             <DDNSSet v-if="global.currentPage.value=='#ddnsset'?true:false"></DDNSSet>
+            <ReverseProxy v-if="global.currentPage.value=='#reverseproxylist'?true:false"></ReverseProxy>
             <About v-if="global.currentPage.value=='#about'?true:false"></About>
           </el-main>
 
@@ -49,6 +50,7 @@ import WhiteListSet from './components/WhiteListSet.vue';
 import WhiteLists from './components/WhiteLists.vue';
 import BlackLists from './components/BlackLists.vue';
 import DDNS from './components/DDNS.vue';
+import ReverseProxy from './components/reverseproxy.vue';
 
 import {apiGetVersion} from "./apis/utils.js"
 import DDNSSet from './components/DDNSSet.vue';

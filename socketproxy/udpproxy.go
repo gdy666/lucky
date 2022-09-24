@@ -1,5 +1,5 @@
-//Copyright 2022 gdy, 272288813@qq.com
-package base
+// Copyright 2022 gdy, 272288813@qq.com
+package socketproxy
 
 import (
 	"fmt"
@@ -173,7 +173,7 @@ func (p *UDPProxy) StopProxy() {
 
 }
 
-//ReadFromTargetOnce one clientAddr only read once,short mode eg: udp dns
+// ReadFromTargetOnce one clientAddr only read once,short mode eg: udp dns
 func (p *UDPProxy) ReadFromTargetOnce() bool {
 	if p.targetPort == 53 || p.ShortMode {
 		return true

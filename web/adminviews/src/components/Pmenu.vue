@@ -24,6 +24,8 @@
                 <template #title>程序日志</template>
             </el-menu-item>
 
+            <el-divider style="margin-top: 0px;margin-bottom: 0px;" />
+
             <el-sub-menu index="#relay">
                 <template #title>
                     <el-icon>
@@ -38,7 +40,57 @@
                     </el-icon>
                     <template #title>转发规则</template>
                 </el-menu-item>
+            </el-sub-menu>
 
+            <el-sub-menu index="#reverseproxy">
+                <template #title>
+                    <el-icon>
+                        <Position />
+                    </el-icon>
+                    <span>反向代理</span>
+                </template>
+
+                <el-menu-item index="#reverseproxylist">
+                    <el-icon>
+                        <List />
+                    </el-icon>
+                    <template #title>反向代理规则列表</template>
+                </el-menu-item>
+            </el-sub-menu>
+
+            <el-sub-menu index="#ddns">
+                <template #title>
+                    <el-icon>
+                        <Promotion />
+                    </el-icon>
+                    <span>动态域名</span>
+                </template>
+
+                <el-menu-item index="#ddnstasklist">
+                    <el-icon>
+                        <List />
+                    </el-icon>
+                    <template #title>动态域名任务列表</template>
+                </el-menu-item>
+
+                <el-menu-item index="#ddnsset">
+                    <el-icon>
+                        <Setting />
+                    </el-icon>
+                    <template #title>动态域名设置</template>
+                </el-menu-item>
+            </el-sub-menu>
+
+
+            <el-divider style="margin-top: 0px;margin-bottom: 0px;" />
+
+            <el-sub-menu index="#safe">
+                <template #title>
+                    <el-icon>
+                        <Guide />
+                    </el-icon>
+                    <span>IP过滤设置</span>
+                </template>
 
                 <el-menu-item index="#whitelistset">
                     <el-icon>
@@ -62,40 +114,7 @@
                 </el-menu-item>
 
             </el-sub-menu>
-
-
-
-            <el-sub-menu index="#ddns">
-                <template #title>
-                    <el-icon>
-                        <Promotion />
-                    </el-icon>
-                    <span>动态域名</span>
-                </template>
-
-                <el-menu-item index="#ddnstasklist">
-                    <el-icon>
-                        <List />
-                    </el-icon>
-                    <template #title>动态域名任务列表</template>
-                </el-menu-item>
-
-                <el-menu-item index="#ddnsset">
-                    <el-icon>
-                        <Setting />
-                    </el-icon>
-                    <template #title>动态域名设置</template>
-                </el-menu-item>
-
-
-
-
-            </el-sub-menu>
-
-
-
-
-
+            
 
             <el-menu-item index="#set">
                 <el-icon>
@@ -105,7 +124,7 @@
             </el-menu-item>
 
 
-            <el-divider style="margin-top: 0px;margin-bottom: 0px;" />
+
             <el-menu-item index="#about">
                 <el-icon>
                     <Pointer />
@@ -194,7 +213,7 @@ function handleSelect(key, keyPath, item, routeResult) {
             break;
         case "#logo":
             //window.open("https://github.com/gdy666/lucky", "_blank");
-            location.hash ="#about"
+            location.hash = "#about"
             break;
         default:
             SetHash(key)

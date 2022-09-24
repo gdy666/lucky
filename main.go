@@ -10,18 +10,19 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gdy666/lucky/base"
 	"github.com/gdy666/lucky/config"
 	"github.com/gdy666/lucky/ddns"
+	"github.com/gdy666/lucky/reverseproxy"
 	"github.com/gdy666/lucky/rule"
+	"github.com/gdy666/lucky/socketproxy"
 )
 
 var (
 	listenPort       = flag.Int("p", 16601, "http Admin Web listen port ")
 	pcl              = flag.Int64("pcl", -1, "global proxy count limit")
 	gpmc             = flag.Int64("gpmc", -1, "global  proxy max connections,default(1024)")
-	udpPackageSize   = flag.Int("ups", base.UDP_DEFAULT_PACKAGE_SIZE, "udp package max size")
-	smc              = flag.Int64("smc", base.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS, "signle  proxy max connections,default(128)")
+	udpPackageSize   = flag.Int("ups", socketproxy.UDP_DEFAULT_PACKAGE_SIZE, "udp package max size")
+	smc              = flag.Int64("smc", socketproxy.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS, "signle  proxy max connections,default(128)")
 	upm              = flag.Bool("upm", true, "udp proxy Performance Mode open")
 	udpshort         = flag.Bool("udpshort", false, "udp short mode,eg dns")
 	configureFileURL = flag.String("c", "", "configure file url")
@@ -35,6 +36,11 @@ var (
 )
 
 var runTime time.Time
+
+func init() {
+	var cstZone = time.FixedZone("CST", 8*3600) // 东八
+	time.Local = cstZone
+}
 
 func main() {
 	flag.Parse()
@@ -55,16 +61,19 @@ func main() {
 
 	gcf := config.GetConfig()
 
+	config.BlackListInit()
+	config.WhiteListInit()
+
 	//fmt.Printf("*gcf:%v\n", *gcf)
 
-	base.SetSafeCheck(config.SafeCheck)
-	base.SetGlobalMaxConnections(gcf.BaseConfigure.GlobalMaxConnections)
-	base.SetGlobalMaxProxyCount(gcf.BaseConfigure.ProxyCountLimit)
+	socketproxy.SetSafeCheck(config.SafeCheck)
+	socketproxy.SetGlobalMaxConnections(gcf.BaseConfigure.GlobalMaxConnections)
+	socketproxy.SetGlobalMaxProxyCount(gcf.BaseConfigure.ProxyCountLimit)
 	config.SetRunMode(runMode)
 	config.SetVersion(version)
 	log.Printf("RunMode:%s\n", runMode)
 	log.Printf("version:%s\tcommit %s, built at %s\n", version, commit, date)
-	RunAdminWeb(gcf.BaseConfigure.AdminWebListenPort)
+	RunAdminWeb(gcf.BaseConfigure.AdminWebListenPort, gcf.BaseConfigure.LogMaxSize)
 
 	runTime = time.Now()
 
@@ -88,6 +97,8 @@ func main() {
 	if ddnsConf.Enable {
 		ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)
 	}
+
+	reverseproxy.InitReverseProxyServer()
 
 	//ddns.RunTimer(time.Second, time.Second*30)
 
@@ -113,7 +124,7 @@ func main() {
 }
 
 func LoadRuleListFromCMD(args []string) {
-	options := base.RelayRuleOptions{UDPPackageSize: *udpPackageSize,
+	options := socketproxy.RelayRuleOptions{UDPPackageSize: *udpPackageSize,
 		SingleProxyMaxConnections: *smc,
 		UDPProxyPerformanceMode:   *upm,
 		UDPShortMode:              *udpshort}

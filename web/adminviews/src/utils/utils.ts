@@ -14,7 +14,7 @@ export function isIP(ip :string){
 const MenuIndexList = ["#status",
 "#log","#relayset","#whitelistset",
 "#whitelists","#blacklists","#set",
-"#login","#ddns","#ddnstasklist","#ddnsset","#about"]
+"#login","#ddns","#ddnstasklist","#ddnsset","#about","#reverseproxylist"]
 
 export function PageExist(page:string) {
     for(let i in MenuIndexList){
@@ -40,3 +40,46 @@ export function StringToArrayList(str : string){
     }
     return resList
 }
+
+export function StrArrayListToBrHtml( strList : string[]){
+    var resHtml = ""
+    for ( let i in strList){
+        resHtml += strList[i]  + '<br />'
+    }
+    return resHtml
+}
+
+export function StrArrayListToArea(strList : string[]){
+    var res = ""
+    for ( let i in strList){
+        if(i!="0"){
+            res +='\n'
+        }
+        res += strList[i]
+       // res += strList[i]  + '\n'
+    }
+    return res
+}
+
+export const LogLevelList = [
+    {
+        value: 2,
+        label: 'Error',
+    },
+    {
+        value: 3,
+        label: 'Warn',
+    },
+    {
+        value: 4,
+        label: 'Info',
+    },
+    {
+        value: 5,
+        label: 'Debug',
+    },
+    {
+        value: 6,
+        label: 'Trace',
+    },
+]

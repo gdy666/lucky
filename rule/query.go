@@ -1,9 +1,7 @@
-//Copyright 2022 gdy, 272288813@qq.com
+// Copyright 2022 gdy, 272288813@qq.com
 package rule
 
-import (
-	"github.com/gdy666/lucky/base"
-)
+import "github.com/gdy666/lucky/socketproxy"
 
 type RelayRuleProxyInfo struct {
 	Proxy              string `json:"Proxy"`
@@ -58,7 +56,7 @@ func GetRelayRuleList() (*[]RelayRule, map[string][]RelayRuleProxyInfo) {
 // 	return info
 // }
 
-func GetProxyInfo(p base.Proxy) map[string]string {
+func GetProxyInfo(p socketproxy.Proxy) map[string]string {
 	pi := make(map[string]string)
 	pi["proxyType"] = p.GetProxyType()
 	pi["key"] = p.GetKey()

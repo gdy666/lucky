@@ -101,8 +101,6 @@ func DDNSTaskInfoMapUpdateDomainInfo(task *DDNSTaskInfo) {
 	state.(*DDNSTaskState).Domains = task.TaskState.Domains
 }
 
-//func DDNSTaskInfo
-
 func DDNSTaskInfoMapDelete(key string) {
 	taskInfoMapMutex.Lock()
 	defer taskInfoMapMutex.Unlock()
@@ -126,8 +124,7 @@ func GetDDNSTaskInfoList() []*DDNSTaskInfo {
 	var res []*DDNSTaskInfo
 	for i := range ddnsTaskList {
 		ti := CreateDDNSTaskInfo(ddnsTaskList[i])
-		res = append(res, &ti)
-		taskInfoMap.Store(ddnsTaskList[i].TaskKey, &ti.TaskState)
+		res = append(res, ti)
 	}
 	return res
 }
@@ -140,25 +137,23 @@ func GetDDNSTaskInfoByKey(key string) *DDNSTaskInfo {
 		return nil
 	}
 	info := CreateDDNSTaskInfo(ddnsConf)
-	return &info
+	return info
 }
 
-func CreateDDNSTaskInfo(task *config.DDNSTask) DDNSTaskInfo {
+func CreateDDNSTaskInfo(task *config.DDNSTask) *DDNSTaskInfo {
 	var res DDNSTaskInfo
 	res.DDNSTask = *task
 	info, ok := taskInfoMap.Load(task.TaskKey)
 	if ok {
 		res.TaskState = *info.(*DDNSTaskState)
 	} else {
-		var ds DDNSTaskState
-		ds.Init(res.Domains)
+		res.TaskState.Init(res.Domains)
 		if task.Enable {
-			ds.SetDomainUpdateStatus(UpdateWaiting, "")
+			res.TaskState.SetDomainUpdateStatus(UpdateWaiting, "")
 		} else {
-			ds.SetDomainUpdateStatus(UpdateStop, "")
+			res.TaskState.SetDomainUpdateStatus(UpdateStop, "")
 		}
-
-		res.TaskState = ds
+		taskInfoMap.Store(task.TaskKey, &res.TaskState)
 	}
-	return res
+	return &res
 }

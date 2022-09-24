@@ -1,7 +1,12 @@
 // Copyright 2022 gdy, 272288813@qq.com
 package config
 
-import "time"
+import (
+	"fmt"
+	"net"
+	"strings"
+	"time"
+)
 
 type WhiteListConfigure struct {
 	BaseConfigure WhiteListBaseConfigure `json:"BaseConfigure"`
@@ -9,8 +14,25 @@ type WhiteListConfigure struct {
 }
 
 type WhiteListItem struct {
-	IP            string `json:"IP"`
-	EffectiveTime string `json:"Effectivetime"` //有效时间
+	IP            string     `json:"IP"`
+	EffectiveTime string     `json:"Effectivetime"` //有效时间
+	NetIP         net.IP     `json:"-"`
+	Cidr          *net.IPNet `json:"-"`
+}
+
+func (w *WhiteListItem) Contains(ip string) bool {
+	netIP := net.ParseIP(ip)
+	if netIP == nil {
+		return false
+	}
+	if w.NetIP != nil {
+		return w.NetIP.Equal(netIP)
+	}
+
+	if w.Cidr != nil {
+		return w.Cidr.Contains(netIP)
+	}
+	return false
 }
 
 type WhiteListBaseConfigure struct {
@@ -52,9 +74,43 @@ func GetWhiteList() []WhiteListItem {
 	return resList
 }
 
+func WhiteListInit() {
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
+	var netIP net.IP
+	var cidr *net.IPNet
+
+	for i := range programConfigure.WhiteListConfigure.WhiteList {
+		netIP = nil
+		cidr = nil
+		if strings.Contains(programConfigure.WhiteListConfigure.WhiteList[i].IP, "/") {
+			_, cidr, _ = net.ParseCIDR(programConfigure.WhiteListConfigure.WhiteList[i].IP)
+		} else {
+			netIP = net.ParseIP(programConfigure.WhiteListConfigure.WhiteList[i].IP)
+		}
+		programConfigure.WhiteListConfigure.WhiteList[i].Cidr = cidr
+		programConfigure.WhiteListConfigure.WhiteList[i].NetIP = netIP
+	}
+}
+
 func WhiteListAdd(ip string, activelifeDuration int32) (string, error) {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
+
+	var err error
+	var netIP net.IP = nil
+	var cidr *net.IPNet = nil
+	if strings.Contains(ip, "/") {
+		_, cidr, err = net.ParseCIDR(ip)
+		if err != nil {
+			return "", fmt.Errorf("网段格式有误，转换出错：%s", err.Error())
+		}
+	} else {
+		netIP = net.ParseIP(ip)
+		if netIP == nil {
+			return "", fmt.Errorf("IP格式有误")
+		}
+	}
 
 	if activelifeDuration <= 0 {
 		activelifeDuration = programConfigure.WhiteListConfigure.BaseConfigure.ActivelifeDuration
@@ -68,7 +124,7 @@ func WhiteListAdd(ip string, activelifeDuration int32) (string, error) {
 			return EffectiveTimeStr, Save()
 		}
 	}
-	item := WhiteListItem{IP: ip, EffectiveTime: EffectiveTimeStr}
+	item := WhiteListItem{IP: ip, EffectiveTime: EffectiveTimeStr, NetIP: netIP, Cidr: cidr}
 	programConfigure.WhiteListConfigure.WhiteList = append(programConfigure.WhiteListConfigure.WhiteList, item)
 	return EffectiveTimeStr, Save()
 }
