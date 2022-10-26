@@ -152,3 +152,45 @@ func GetIPFromNetInterface(ipType, netinterface, ipreg string) string {
 
 	return ""
 }
+
+func GetGlobalIPv4BroadcastList() []string {
+	var res []string
+	allNetInterfaces, err := net.Interfaces()
+	if err != nil {
+		return res
+	}
+
+	for i := 0; i < len(allNetInterfaces); i++ {
+		if (allNetInterfaces[i].Flags & net.FlagUp) != 0 {
+			addrs, _ := allNetInterfaces[i].Addrs()
+
+			for _, address := range addrs {
+				if ipnet, ok := address.(*net.IPNet); ok && ipnet.IP.IsGlobalUnicast() {
+					_, bits := ipnet.Mask.Size()
+					// 需匹配全局单播地址
+					//if bits == 128 && ipv6Unicast.Contains(ipnet.IP) {
+
+					if bits == 32 {
+						//ipv4 = append(ipv4, ipnet.IP.String())
+						bcst := GetBroadcast(ipnet.IP, ipnet.Mask)
+						res = append(res, bcst)
+					}
+				}
+			}
+
+		}
+	}
+
+	return res
+}
+
+func GetBroadcast(ip net.IP, mask net.IPMask) string {
+
+	bcst := make(net.IP, len(ip))
+	copy(bcst, ip)
+	for i := 0; i < len(mask); i++ {
+		ipIdx := len(bcst) - i - 1
+		bcst[ipIdx] = ip[ipIdx] | ^mask[len(mask)-i-1]
+	}
+	return bcst.String()
+}

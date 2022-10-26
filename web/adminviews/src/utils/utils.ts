@@ -12,9 +12,10 @@ export function isIP(ip :string){
 }
 
 const MenuIndexList = ["#status",
-"#log","#relayset","#whitelistset",
+"#log","#whitelistset",
 "#whitelists","#blacklists","#set",
-"#login","#ddns","#ddnstasklist","#ddnsset","#about","#reverseproxylist"]
+"#login","#ddns","#ddnstasklist","#ddnsset",
+"#about","#reverseproxylist","#ssl","#portforward","#portforwardset","#wol"]
 
 export function PageExist(page:string) {
     for(let i in MenuIndexList){
@@ -83,3 +84,12 @@ export const LogLevelList = [
         label: 'Trace',
     },
 ]
+
+export const bytesToSize = (bytes) => {
+    if (bytes === 0) return '0 B';
+    var k = 1000, // or 1024
+        sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+        i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i];
+}

@@ -93,7 +93,7 @@ const Login = () => {
         if (res.ret == 0) {
             MessageShow("success", "登录成功")
             global.storage.setItem("token",res.token)
-            global.currentPage.value = "#set"
+            //global.currentPage.value = "#set"
             location.hash="#set"
             //console.log("cookies:"+res.cookies)
             

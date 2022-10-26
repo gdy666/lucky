@@ -161,8 +161,9 @@ func getDomainItem(fullDomain string, domains *[]ddnscore.Domain) *ddnscore.Doma
 
 func (d *DNSCommon) CreateHTTPClient() (*http.Client, error) {
 	ddnsGlobalConf := config.GetDDNSConfigure()
+
 	return httputils.CreateHttpClient(
-		"tcp",
+		d.task.DNS.GetCallAPINetwork(),
 		"",
 		!ddnsGlobalConf.HttpClientSecureVerify,
 		d.task.DNS.HttpClientProxyType,

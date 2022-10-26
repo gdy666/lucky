@@ -11,8 +11,6 @@ type BaseProxyConf struct {
 	key        string
 	ProxyType  string // tcp tcp4 tcp6 udp udp4 udp6
 
-	//TrafficMonitor bool //流量监控
-	fromRule string
 }
 
 func (p *BaseProxyConf) GetProxyType() string {
@@ -21,14 +19,6 @@ func (p *BaseProxyConf) GetProxyType() string {
 
 func (p *BaseProxyConf) GetStatus() string {
 	return p.ProxyType
-}
-
-func (p *BaseProxyConf) SetFromRule(rule string) {
-	p.fromRule = rule
-}
-
-func (p *BaseProxyConf) FromRule() string {
-	return p.fromRule
 }
 
 func (p *BaseProxyConf) ReceiveDataCallback(nw int64) {

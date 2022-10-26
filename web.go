@@ -1,16 +1,11 @@
-//go:build adminweb
-// +build adminweb
-
 package main
 
 import (
-	"fmt"
+	"github.com/gdy666/lucky/config"
 	"github.com/gdy666/lucky/web"
-	"log"
 )
 
-func RunAdminWeb(listenPort, logMaxSize int) {
-	listen := fmt.Sprintf(":%d", listenPort)
-	go web.RunAdminWeb(listen, logMaxSize)
-	log.Printf("AdminWeb listen on %s", listen)
+func RunAdminWeb(conf *config.BaseConfigure) {
+	//listen := fmt.Sprintf(":%d", listenPort)
+	go web.RunAdminWeb(conf)
 }

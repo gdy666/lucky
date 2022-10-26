@@ -4,8 +4,9 @@
         <p class="status">CPU全局使用率:{{ status.usedCPU }}</p>
         <p class="status">当前进程CPU使用率:{{ status.currentProcessUsedCPU }}</p>
         <p class="status">进程协程数:{{ status.goroutine }} 占用内存:{{ status.processUsedMem }}</p>
-        <p class="status">Lucky 全局连接数:{{ status.currentConnections }} </p>
-        <p class="status">Lucky 全局限制连接数:{{ status.maxConnections }}</p>
+        <p class="status">端口转发TCP总连接数:{{ status.currentTCPConnections }} </p>
+        <p class="status">端口转发全局UDP读取目标地址数据协程数:{{ status.currentUDPConnections }} </p>
+        <p class="status">端口转发TCP全局限制连接数:{{ status.maxTCPConnections }}</p>
         <p class="status">Lucky 启动时间:{{ status.runTime }}</p>
 
 
@@ -62,8 +63,9 @@ var status=ref({totleMem: '0m',
             currentProcessUsedCPU:"0%",
             goroutine:"0",
             processUsedMem:"0m",
-            currentConnections:0,
-            maxConnections:0,
+            currentTCPConnections:0,
+            currentUDPConnections:0,
+            maxTCPConnections:0,
             proxysStatus:"",
             runTime:""})
 

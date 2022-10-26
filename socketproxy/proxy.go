@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/gdy666/lucky/thirdlib/gdylib/pool"
+	"github.com/sirupsen/logrus"
 )
 
 type Proxy interface {
@@ -23,8 +24,7 @@ type Proxy interface {
 	GetListenPort() int
 	GetKey() string
 	GetCurrentConnections() int64
-	SetFromRule(string)
-	FromRule() string
+
 	String() string
 	GetTrafficIn() int64
 	GetTrafficOut() int64
@@ -32,11 +32,12 @@ type Proxy interface {
 }
 
 type RelayRuleOptions struct {
-	UDPPackageSize            int    `json:"UDPPackageSize,omitempty"`
-	SingleProxyMaxConnections int64  `json:"SingleProxyMaxConnections,omitempty"`
-	UDPProxyPerformanceMode   bool   `json:"UDPProxyPerformanceMode,omitempty"`
-	UDPShortMode              bool   `json:"UDPShortMode,omitempty"`
-	SafeMode                  string `json:"SafeMode,omitempty"`
+	UDPPackageSize                                int    `json:"UDPPackageSize,omitempty"`
+	SingleProxyMaxTCPConnections                  int64  `json:"SingleProxyMaxTCPConnections,omitempty"`
+	SingleProxyMaxUDPReadTargetDatagoroutineCount int64  `json:"SingleProxyMaxUDPReadTargetDatagoroutineCount"`
+	UDPProxyPerformanceMode                       bool   `json:"UDPProxyPerformanceMode,omitempty"`
+	UDPShortMode                                  bool   `json:"UDPShortMode,omitempty"`
+	SafeMode                                      string `json:"SafeMode,omitempty"`
 }
 
 // Join two io.ReadWriteCloser and do some operations.
@@ -157,16 +158,16 @@ func formatFileSize(fileSize int64) (size string) {
 
 }
 
-func CreateProxy(proxyType, listenIP, targetHost string, balanceTargetAddressList *[]string, listenPort, targetPort int, options *RelayRuleOptions) (p Proxy, err error) {
+func CreateProxy(log *logrus.Logger, proxyType, listenIP string, targetAddressList []string, listenPort, targetPort int, options *RelayRuleOptions) (p Proxy, err error) {
 	//key := GetProxyKey(proxyType, listenIP, listenPort)
 	switch {
 	case strings.HasPrefix(proxyType, "tcp"):
 		{
-			return CreateTCPProxy(proxyType, listenIP, targetHost, balanceTargetAddressList, listenPort, targetPort, options), nil
+			return CreateTCPProxy(log, proxyType, listenIP, targetAddressList, listenPort, targetPort, options), nil
 		}
 	case strings.HasPrefix(proxyType, "udp"):
 		{
-			return CreateUDPProxy(proxyType, listenIP, targetHost, balanceTargetAddressList, listenPort, targetPort, options), nil
+			return CreateUDPProxy(log, proxyType, listenIP, targetAddressList, listenPort, targetPort, options), nil
 		}
 	default:
 		return nil, fmt.Errorf("未支持的类型:%s", proxyType)

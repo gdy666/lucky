@@ -49,9 +49,10 @@ func (l *LogsBuffer) Fire(entry *logrus.Entry) error {
 		return fmt.Errorf("entry.String() err:%s", err.Error())
 	}
 
-	l.AddLog(entry.Time, entryStr, entry.Data)
 	if l.fireCallback != nil {
 		return l.fireCallback(entry)
+	} else {
+		l.AddLog(entry.Time, entryStr, entry.Data)
 	}
 
 	return nil
@@ -168,4 +169,31 @@ func (l *LogsBuffer) GetLogCount() int {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return len(l.logsStore)
+}
+
+//---------------------------
+
+var LogsBufferStore map[string]*LogsBuffer
+var LogsBufferStoreMu sync.Mutex
+
+func init() {
+	LogsBufferStore = make(map[string]*LogsBuffer)
+}
+
+func CreateLogbuffer(key string, buffSize int) *LogsBuffer {
+	if strings.TrimSpace(key) == "" {
+		return nil
+	}
+	LogsBufferStoreMu.Lock()
+	defer LogsBufferStoreMu.Unlock()
+	var buf *LogsBuffer
+	var ok bool
+	if buf, ok = LogsBufferStore[key]; !ok {
+		buf = &LogsBuffer{}
+		buf.SetBufferSize(buffSize)
+		LogsBufferStore[key] = buf
+	} else if buf.GetBufferSize() != buffSize {
+		buf.SetBufferSize(buffSize)
+	}
+	return buf
 }

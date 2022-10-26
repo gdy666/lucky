@@ -17,9 +17,13 @@
 
         <div class="line">
             
-<el-link type="primary" href="tencent://message/?uin=272288814&Site=&Menu=yes" target="_blank">QQ联系作者</el-link>
-&nbsp;&nbsp;&nbsp;邮箱: 272288814@qq.com
+<el-link type="primary" href="tencent://message/?uin=272288813&Site=&Menu=yes" target="_blank">QQ联系作者</el-link>
+&nbsp;&nbsp;&nbsp;邮箱: 272288813@qq.com
 
+        </div>
+
+        <div class="line">
+             Lukcy交流 QQ群:&nbsp;&nbsp;602427029
         </div>
 
         <div class="line">
@@ -28,10 +32,6 @@
 
         <div class="line">
              Gitee&nbsp;&nbsp;<el-link type="primary" href="https://gitee.com/gdy666/lucky" target="_blank">https://gitee.com/gdy666/lucky</el-link>
-        </div>
-
-        <div class="line">
-           <el-link type="primary" href="https://pan.baidu.com/s/1NfumD9XjYU3OTeVmbu6vOQ?pwd=6666" target="_blank">最新版本可访问百度网盘</el-link>  
         </div>
 
         <div>

@@ -71,6 +71,6 @@ func GetAccessLogs(ruleKey, proxyKey string, pageSize, page int) (int, []any) {
 	if subRule == nil {
 		return 0, res
 	}
-	total, res = subRule.GetLogsBuffer().GetLogsByLimit(config.ReverseProxyLogConvert, pageSize, page)
+	total, res = subRule.GetLogsBuffer().GetLogsByLimit(config.WebLogConvert, pageSize, page)
 	return total, res
 }

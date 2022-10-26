@@ -91,9 +91,7 @@ func restoreConfigure(c *gin.Context) {
 	if conf.BaseConfigure.AdminAccount == "" ||
 		conf.BaseConfigure.AdminPassword == "" ||
 		conf.BaseConfigure.AdminWebListenPort <= 0 ||
-		conf.BaseConfigure.AdminWebListenPort >= 65536 ||
-		conf.BaseConfigure.GlobalMaxConnections <= 0 ||
-		conf.BaseConfigure.ProxyCountLimit <= 0 {
+		conf.BaseConfigure.AdminWebListenPort >= 65536 {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("配置文件[%s]参数有误", file.Filename)})
 		return
 	}

@@ -57,11 +57,21 @@ type DNSConfig struct {
 	ForceInterval           int         `json:"ForceInterval"`       //(秒)即使IP没有变化,到一定时间后依然强制更新或先DNS解析比较IP再更新
 	ResolverDoaminCheck     bool        `json:"ResolverDoaminCheck"` //调用callback同步前先解析一次域名,如果IP相同就不同步
 	DNSServerList           []string    `json:"DNSServerList"`       //DNS服务器列表
+	CallAPINetwork          string      `json:"CallAPINetwork"`      //空代理tcp, tcp4,tcp6
 	Callback                DNSCallback `json:"Callback"`
 	HttpClientProxyType     string      `json:"HttpClientProxyType"`     //http client代理服务器设置
 	HttpClientProxyAddr     string      `json:"HttpClientProxyAddr"`     //代理服务器IP
 	HttpClientProxyUser     string      `json:"HttpClientProxyUser"`     //代理用户
 	HttpClientProxyPassword string      `json:"HttpClientProxyPassword"` //代理密码
+}
+
+func (d *DNSConfig) GetCallAPINetwork() string {
+	switch d.CallAPINetwork {
+	case "tcp4", "tcp6":
+		return d.CallAPINetwork
+	default:
+		return "tcp"
+	}
 }
 
 type DNSCallback struct {
@@ -179,8 +189,8 @@ func GetDDNSTaskConfigureList() []*DDNSTask {
 }
 
 func GetDDNSTaskByKey(taskKey string) *DDNSTask {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
 	taskIndex := -1
 
 	for i := range programConfigure.DDNSTaskList {

@@ -2,7 +2,6 @@ package ddns
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 
 	"github.com/gdy666/lucky/ddnscore.go"
@@ -142,12 +141,17 @@ func (dnspod *Dnspod) modify(result DnspodRecordListResp, domain *ddnscore.Domai
 
 // 公共
 func (dnspod *Dnspod) commonRequest(apiAddr string, values url.Values, domain *ddnscore.Domain) (status DnspodStatus, err error) {
-	resp, e := http.PostForm(
+	client, e := dnspod.CreateHTTPClient()
+	if e != nil {
+		err = e
+		return
+	}
+	resp, e := client.PostForm(
 		apiAddr,
 		values,
 	)
 
-	if err != nil {
+	if e != nil {
 		err = e
 		return
 	}

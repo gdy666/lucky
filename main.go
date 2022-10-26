@@ -13,18 +13,11 @@ import (
 	"github.com/gdy666/lucky/config"
 	"github.com/gdy666/lucky/ddns"
 	"github.com/gdy666/lucky/reverseproxy"
-	"github.com/gdy666/lucky/rule"
 	"github.com/gdy666/lucky/socketproxy"
 )
 
 var (
 	listenPort       = flag.Int("p", 16601, "http Admin Web listen port ")
-	pcl              = flag.Int64("pcl", -1, "global proxy count limit")
-	gpmc             = flag.Int64("gpmc", -1, "global  proxy max connections,default(1024)")
-	udpPackageSize   = flag.Int("ups", socketproxy.UDP_DEFAULT_PACKAGE_SIZE, "udp package max size")
-	smc              = flag.Int64("smc", socketproxy.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS, "signle  proxy max connections,default(128)")
-	upm              = flag.Bool("upm", true, "udp proxy Performance Mode open")
-	udpshort         = flag.Bool("udpshort", false, "udp short mode,eg dns")
 	configureFileURL = flag.String("c", "", "configure file url")
 )
 
@@ -50,7 +43,7 @@ func main() {
 	if err != nil {
 		log.Printf("%s", err.Error())
 		log.Printf("载入默认配置以及命令行设定的参数")
-		config.LoadDefault(*pcl, *listenPort, *gpmc)
+		config.LoadDefault(*listenPort)
 		if len(*configureFileURL) > 0 {
 			err = config.Save()
 			if err != nil {
@@ -63,39 +56,31 @@ func main() {
 
 	config.BlackListInit()
 	config.WhiteListInit()
+	config.SSLCertficateListInit()
 
 	//fmt.Printf("*gcf:%v\n", *gcf)
 
 	socketproxy.SetSafeCheck(config.SafeCheck)
-	socketproxy.SetGlobalMaxConnections(gcf.BaseConfigure.GlobalMaxConnections)
-	socketproxy.SetGlobalMaxProxyCount(gcf.BaseConfigure.ProxyCountLimit)
+	//socketproxy.SetGlobalMaxConnections(gcf.BaseConfigure.GlobalMaxConnections)
+	//socketproxy.SetGlobalMaxProxyCount(gcf.BaseConfigure.ProxyCountLimit)
 	config.SetRunMode(runMode)
 	config.SetVersion(version)
 	log.Printf("RunMode:%s\n", runMode)
 	log.Printf("version:%s\tcommit %s, built at %s\n", version, commit, date)
-	RunAdminWeb(gcf.BaseConfigure.AdminWebListenPort, gcf.BaseConfigure.LogMaxSize)
+
+	RunAdminWeb(&gcf.BaseConfigure)
 
 	runTime = time.Now()
 
-	// if *upm {
-	// 	log.Printf("udp proxy Performance Mode open ")
-	// }
+	//LoadRuleFromConfigFile(gcf)
 
-	//log.Printf("Gobal  proxy max connections:[%d] single  proxy max connections:[%d]\n", base.GetGlobalMaxConnections(), base.GetSingleProxyMaxConnections(smc))
-
-	if len(flag.Args()) > 0 {
-		LoadRuleListFromCMD(flag.Args())
-	}
-
-	LoadRuleFromConfigFile(gcf)
-
-	rule.EnableAllRelayRule() //开启规则
+	config.PortForwardsRuleListInit()
 
 	//config.DDNSTaskListTaskDetailsInit()
 	config.DDNSTaskListConfigureCheck()
 	ddnsConf := config.GetDDNSConfigure()
 	if ddnsConf.Enable {
-		ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)
+		go ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)
 	}
 
 	reverseproxy.InitReverseProxyServer()
@@ -123,43 +108,24 @@ func main() {
 	<-exit
 }
 
-func LoadRuleListFromCMD(args []string) {
-	options := socketproxy.RelayRuleOptions{UDPPackageSize: *udpPackageSize,
-		SingleProxyMaxConnections: *smc,
-		UDPProxyPerformanceMode:   *upm,
-		UDPShortMode:              *udpshort}
+// func LoadRuleFromConfigFile(pc *config.ProgramConfigure) {
+// 	if pc == nil {
+// 		return
+// 	}
+// 	for i := range pc.RelayRuleList {
+// 		relayRule, err := rule.CreateRuleByConfigureAndOptions(
+// 			pc.RelayRuleList[i].Name,
+// 			pc.RelayRuleList[i].Configurestr,
+// 			pc.RelayRuleList[i].Options)
+// 		if err != nil {
+// 			continue
+// 		}
+// 		relayRule.From = "configureFile" //规则来源
+// 		relayRule.IsEnable = pc.RelayRuleList[i].Enable
 
-	relayRules, err := rule.GetRelayRulesFromCMD(flag.Args(), &options)
-	if err != nil {
-		log.Print("config.GetRelayRulesFromCMD err:", err.Error())
-		return
-	}
-
-	_, e := rule.AddRuleToGlobalRuleList(false, (*relayRules)...)
-	if e != nil {
-		log.Printf("%s\n", e)
-	}
-
-}
-
-func LoadRuleFromConfigFile(pc *config.ProgramConfigure) {
-	if pc == nil {
-		return
-	}
-	for i := range pc.RelayRuleList {
-		relayRule, err := rule.CreateRuleByConfigureAndOptions(
-			pc.RelayRuleList[i].Name,
-			pc.RelayRuleList[i].Configurestr,
-			pc.RelayRuleList[i].Options)
-		if err != nil {
-			continue
-		}
-		relayRule.From = "configureFile" //规则来源
-		relayRule.IsEnable = pc.RelayRuleList[i].Enable
-
-		_, e := rule.AddRuleToGlobalRuleList(false, *relayRule)
-		if e != nil {
-			log.Printf("%s\n", e)
-		}
-	}
-}
+// 		_, e := rule.AddRuleToGlobalRuleList(false, *relayRule)
+// 		if e != nil {
+// 			log.Printf("%s\n", e)
+// 		}
+// 	}
+// }

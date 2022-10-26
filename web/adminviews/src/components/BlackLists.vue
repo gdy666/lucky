@@ -128,10 +128,10 @@ const flushBlackListlife = (index, ip, life) => {
 
 const addBlackList = () => {
 
-    if (!isIP(addBlackListForm.value.IP)) {
-        MessageShow("error", "IP格式有误,请检查修正后再添加")
-        return
-    }
+    // if (!isIP(addBlackListForm.value.IP)) {
+    //     MessageShow("error", "IP格式有误,请检查修正后再添加")
+    //     return
+    // }
 
     apiFlushBlackList(addBlackListForm.value.IP, addBlackListForm.value.Life).then((res) => {
         if (res.ret == 0) {

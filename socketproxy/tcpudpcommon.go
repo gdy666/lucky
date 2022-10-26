@@ -3,23 +3,28 @@ package socketproxy
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"github.com/sirupsen/logrus"
 )
 
 const TCP_DEFAULT_STREAM_BUFFERSIZE = 128
-
-const DEFAULT_GLOBAL_MAX_CONNECTIONS = int64(10240)
+const DEFAULT_GLOBAL_MAX_CONNECTIONS = int64(1024)
+const DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount = int64(1024)
 const TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS = int64(256)
-const DEFAULT_MAX_PROXY_COUNT = int64(128)
 
-var globalMaxConnections = DEFAULT_GLOBAL_MAX_CONNECTIONS
+const DEFAULT_MAX_PORTFORWARDS_LIMIT = int64(128)
 
-var globalCurrentConnections int64 = 0
-var gloMaxProxyCount int64 = DEFAULT_MAX_PROXY_COUNT
+var globalTCPPortforwardMaxConnectionsLimit = DEFAULT_GLOBAL_MAX_CONNECTIONS
+var globalUDPReadTargetDataMaxgoroutineCountLimit = DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount
+
+var globalTCPPortForwardCurrentConnections int64 = 0
+var globalUDPPortForwardCurrentGroutineCount int64 = 0
+
+var gloMaxPortForwardsCountLimit int64 = DEFAULT_MAX_PORTFORWARDS_LIMIT
 
 var safeCheckFunc func(mode, ip string) bool
 
@@ -27,66 +32,68 @@ func SetSafeCheck(f func(mode, ip string) bool) {
 	safeCheckFunc = f
 }
 
-func SetGlobalMaxProxyCount(max int64) {
-	atomic.StoreInt64(&gloMaxProxyCount, max)
+func SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(max int64) {
+	atomic.StoreInt64(&globalUDPReadTargetDataMaxgoroutineCountLimit, max)
 }
 
-func GetGlobalMaxProxyCount() int64 {
-	return atomic.LoadInt64(&gloMaxProxyCount)
+func GetGlobalUDPReadTargetDataMaxgoroutineCountLimit() int64 {
+	return atomic.LoadInt64(&globalUDPReadTargetDataMaxgoroutineCountLimit)
 }
 
-func SetGlobalMaxConnections(max int64) {
-	atomic.StoreInt64(&globalMaxConnections, max)
+func SetGlobalMaxPortForwardsCountLimit(max int64) {
+	atomic.StoreInt64(&gloMaxPortForwardsCountLimit, max)
 }
 
-func GetGlobalMaxConnections() int64 {
-	return atomic.LoadInt64(&globalMaxConnections)
+func GetGlobalMaxPortForwardsCountLimit() int64 {
+	return atomic.LoadInt64(&gloMaxPortForwardsCountLimit)
 }
 
-func GetSingleProxyMaxConnections(m *int64) int64 {
-	if *m <= 0 {
-		return TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS
-	}
-	return *m
-
+func SetGlobalTCPPortforwardMaxConnections(max int64) {
+	atomic.StoreInt64(&globalTCPPortforwardMaxConnectionsLimit, max)
 }
 
-func GetGlobalConnections() int64 {
-	return atomic.LoadInt64(&globalCurrentConnections)
+func GetGlobalTCPPortforwardMaxConnections() int64 {
+	return atomic.LoadInt64(&globalTCPPortforwardMaxConnectionsLimit)
 }
 
-func GloBalCOnnectionsAdd(add int64) int64 {
-	return atomic.AddInt64(&globalCurrentConnections, add)
+func GetGlobalTCPPortForwardConnections() int64 {
+	return atomic.LoadInt64(&globalTCPPortForwardCurrentConnections)
+}
+
+func GloBalTCPPortForwardConnectionsAdd(add int64) int64 {
+	return atomic.AddInt64(&globalTCPPortForwardCurrentConnections, add)
+}
+
+func GetGlobalUDPPortForwardGroutineCount() int64 {
+	return atomic.LoadInt64(&globalUDPPortForwardCurrentGroutineCount)
+}
+
+func GloBalUDPPortForwardGroutineCountAdd(add int64) int64 {
+	return atomic.AddInt64(&globalUDPPortForwardCurrentGroutineCount, add)
 }
 
 type TCPUDPProxyCommonConf struct {
 	CurrentConnectionsCount   int64
 	SingleProxyMaxConnections int64
-	targetBalanceIndex        int64
+
 	BaseProxyConf
 	listentAddress string
 	listenIP       string
 	listenPort     int
-	targetIP       string
-	targetPort     int
-	targetAddress  string
-
-	balanceTargetAddressList []string //均衡负载转发
-	targetBalanceIndexMutex  sync.Mutex
+	//targetIP       string
+	targetAddressList  []string
+	targetAddressCount int
+	targetAddressIndex uint64
+	targetAddressLock  sync.Mutex
+	targetPort         int
 
 	safeMode string
+	log      *logrus.Logger
 }
 
-func (p *TCPUDPProxyCommonConf) CheckConnections() bool {
-	if p.GetCurrentConnections() >= GetGlobalMaxConnections() || p.GetCurrentConnections() >= p.SingleProxyMaxConnections {
-		return false
-	}
-	return true
-}
-
-func (p *TCPUDPProxyCommonConf) PrintConnectionsInfo() {
-	log.Printf("[%s]当前连接数:[%d],单代理最大连接数限制[%d],全局最大连接数限制[%d]\n", p.GetKey(), p.GetCurrentConnections(), p.SingleProxyMaxConnections, GetGlobalMaxConnections())
-}
+// func (p *TCPUDPProxyCommonConf) PrintConnectionsInfo() {
+// 	p.log.Infof("[%s]当前连接数:[%d],当前端口最大TCP连接数限制[%d],全局最大TCP连接数限制[%d]", p.GetKey(), p.GetCurrentConnections(), p.SingleProxyMaxConnections, GetGlobalTCPPortforwardMaxConnections())
+// }
 
 func (p *TCPUDPProxyCommonConf) SetMaxConnections(max int64) {
 	if max <= 0 {
@@ -98,14 +105,19 @@ func (p *TCPUDPProxyCommonConf) SetMaxConnections(max int64) {
 
 func (p *TCPUDPProxyCommonConf) AddCurrentConnections(a int64) {
 	atomic.AddInt64(&p.CurrentConnectionsCount, a)
-	GloBalCOnnectionsAdd(a)
+	if strings.HasPrefix(p.ProxyType, "tcp") {
+		GloBalTCPPortForwardConnectionsAdd(a)
+		return
+	}
+
+	if strings.HasPrefix(p.ProxyType, "udp") {
+		GloBalUDPPortForwardGroutineCountAdd(a)
+		return
+	}
+
 }
 
 func (p *TCPUDPProxyCommonConf) GetCurrentConnections() int64 {
-	return atomic.LoadInt64(&p.CurrentConnectionsCount)
-}
-
-func (p *TCPProxy) GetCurrentCon() int64 {
 	return atomic.LoadInt64(&p.CurrentConnectionsCount)
 }
 
@@ -136,33 +148,19 @@ func (p *TCPUDPProxyCommonConf) GetListenPort() int {
 }
 
 func (p *TCPUDPProxyCommonConf) GetTargetAddress() string {
-	if len(p.balanceTargetAddressList) == 0 {
-		if p.targetAddress == "" {
-			if strings.Contains(p.targetIP, ":") {
-				p.targetAddress = fmt.Sprintf("[%s]:%d", p.targetIP, p.targetPort)
-			} else {
-				p.targetAddress = fmt.Sprintf("%s:%d", p.targetIP, p.targetPort)
-			}
-		}
-		return p.targetAddress
+	p.targetAddressLock.Lock()
+	defer p.targetAddressLock.Unlock()
+	if p.targetAddressCount <= 0 {
+		p.targetAddressCount = len(p.targetAddressList)
+		p.targetAddressIndex = 0
 	}
-
-	var address string
-	addressListLength := int64(len(p.balanceTargetAddressList))
-	p.targetBalanceIndexMutex.Lock()
-	address = p.balanceTargetAddressList[p.targetBalanceIndex%addressListLength]
-	p.targetBalanceIndex++
-	p.targetBalanceIndexMutex.Unlock()
-
+	address := fmt.Sprintf("%s:%d", p.targetAddressList[p.targetAddressIndex%uint64(p.targetAddressCount)], p.targetPort)
+	p.targetAddressIndex++
 	return address
 }
 
 func (p *TCPUDPProxyCommonConf) String() string {
-	if len(p.balanceTargetAddressList) == 0 {
-		return fmt.Sprintf("%s@%s ===> %s", p.ProxyType, p.GetListentAddress(), p.GetTargetAddress())
-	}
-
-	return fmt.Sprintf("%s@%s ===> %v", p.ProxyType, p.GetListentAddress(), p.balanceTargetAddressList)
+	return fmt.Sprintf("%s@%v ===> %v:%d", p.ProxyType, p.GetListentAddress(), p.targetAddressList, p.targetPort)
 }
 
 func (p *TCPUDPProxyCommonConf) SafeCheck(remodeAddr string) bool {

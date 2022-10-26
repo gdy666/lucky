@@ -70,7 +70,7 @@ func flushblacklist(c *gin.Context) {
 
 	newTime, err := config.BlackListAdd(ip, int32(life))
 	if err != nil {
-		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "刷新IP有效期出错"})
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("刷新IP有效期出错:%s", err.Error())})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": newTime})

@@ -1,6 +1,7 @@
 package web
 
 import (
+	"crypto/tls"
 	"embed"
 	"fmt"
 	"io"
@@ -57,10 +58,10 @@ func init() {
 
 }
 
-func RunAdminWeb(listen string, logMaxSize int) {
+func RunAdminWeb(conf *config.BaseConfigure) {
 
 	//gin.Default()
-	logBuffer.SetBufferSize(logMaxSize)
+	logBuffer.SetBufferSize(conf.LogMaxSize)
 
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
@@ -87,11 +88,14 @@ func RunAdminWeb(listen string, logMaxSize int) {
 		authorized.GET("/api/status", status)
 		authorized.GET("/api/test", test)
 
-		authorized.GET("/api/rulelist", rulelist)
-		authorized.POST("/api/rule", addrule)
-		authorized.DELETE("/api/rule", deleterule)
-		authorized.PUT("/api/rule", alterrule)
-		authorized.GET("/api/rule/enable", enablerule)
+		authorized.GET("/api/portforwards", PortForwardsRuleList)
+		authorized.POST("/api/portforward", PortForwardsRuleAdd)
+		authorized.DELETE("/api/portforward", PortForwardsRuleDelete)
+		authorized.PUT("/api/portforward", PortForwardsRuleAlter)
+		authorized.GET("/api/portforward/enable", PortForwardsRuleEnable)
+		authorized.GET("/api/portforward/configure", portforwardConfigure)
+		authorized.PUT("/api/portforward/configure", alterPortForwardConfigure)
+		authorized.GET("/api/portforward/logs", getPortwardRuleLogs)
 
 		authorized.GET("/api/baseconfigure", baseconfigure)
 		authorized.PUT("/api/baseconfigure", alterBaseConfigure)
@@ -125,9 +129,22 @@ func RunAdminWeb(listen string, logMaxSize int) {
 		authorized.GET("/api/reverseproxyrule/enable", enableReverseProxyRule)
 		authorized.GET("/api/reverseproxyrule/logs", getReverseProxyLog)
 
+		authorized.POST("/api/ssl", addSSL)
+		authorized.GET("/api/ssl", getSSLCertficateList)
+		authorized.PUT("/api/ssl", alterSSLCertficate)
+		authorized.DELETE("/api/ssl", deleteSSLCertficate)
+
+		authorized.POST("/api/wol/device", addWOLDevice)
+		authorized.GET("/api/wol/device/wakeup", WOLDeviceWakeUp)
+		authorized.GET("/api/wol/devices", getWOLDeviceList)
+		authorized.PUT("/api/wol/device", alterWOLDevice)
+		authorized.DELETE("/api/wol/device", deleteWOLDevice)
+
 		authorized.GET("/api/info", info)
 		authorized.GET("/api/configure", configure)
 		authorized.POST("/api/configure", restoreConfigure)
+		authorized.POST("/api/getfilebase64", getFileBase64)
+
 		authorized.GET("/api/restoreconfigureconfirm", restoreConfigureConfirm)
 		r.PUT("/api/logout", logout)
 	}
@@ -140,11 +157,39 @@ func RunAdminWeb(listen string, logMaxSize int) {
 
 	//r.Use(func() *gin.Context {})
 
-	err := r.Run(listen)
+	go func() {
+		httpListen := fmt.Sprintf(":%d", conf.AdminWebListenPort)
+		log.Printf("AdminWeb(Http) listen on %s", httpListen)
+		err := r.Run(httpListen)
+		if err != nil {
+			log.Printf("Admin Http Listen error:%s", err.Error())
+			os.Exit(1)
+		}
+	}()
 
-	if err != nil {
-		log.Printf("http.ListenAndServe error:%s", err.Error())
-		os.Exit(1)
+	if conf.AdminWebListenTLS {
+		certlist := config.GetValidSSLCertficateList()
+		if len(certlist) <= 0 {
+			log.Printf("可用SSL证书列表为空,AdminWeb(Https) 监听服务中止运行")
+			return
+		}
+		httpsListen := fmt.Sprintf(":%d", conf.AdminWebListenHttpsPort)
+
+		server := &http.Server{
+			Addr:    httpsListen,
+			Handler: r,
+		}
+		server.TLSConfig = &tls.Config{}
+		server.TLSConfig.Certificates = certlist
+		ln, err := net.Listen("tcp", httpsListen)
+		if err != nil {
+			log.Fatalf("Admin Https Listen error:%s", err.Error())
+		}
+		log.Printf("AdminWeb(Https) listen on %s", httpsListen)
+		err = server.ServeTLS(ln, "", "")
+		if err != nil {
+			log.Printf("AdminWeb(Https) Server error:%s", err.Error())
+		}
 	}
 
 }
@@ -382,8 +427,9 @@ func status(c *gin.Context) {
 	respMap["currentProcessUsedCPU"] = fmt.Sprintf("%.2f%%", GetCurrentProcessCPUPrecent())
 	respMap["goroutine"] = fmt.Sprintf("%d", runtime.NumGoroutine())
 	respMap["processUsedMem"] = stringsp.BinaryUnitToStr(currentProcessMem)
-	respMap["currentConnections"] = fmt.Sprintf("%d", socketproxy.GetGlobalConnections())
-	respMap["maxConnections"] = fmt.Sprintf("%d", socketproxy.GetGlobalMaxConnections())
+	respMap["currentTCPConnections"] = fmt.Sprintf("%d", socketproxy.GetGlobalTCPPortForwardConnections())
+	respMap["currentUDPConnections"] = fmt.Sprintf("%d", socketproxy.GetGlobalUDPPortForwardGroutineCount())
+	respMap["maxTCPConnections"] = fmt.Sprintf("%d", socketproxy.GetGlobalTCPPortforwardMaxConnections())
 	respMap["usedCPU"] = fmt.Sprintf("%.2f%%", GetCpuPercent())
 	respMap["runTime"] = appInfo.RunTime
 	//respMap["proxysStatus"] = proxyStatusList

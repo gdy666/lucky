@@ -34,18 +34,33 @@
                     <span>端口转发</span>
                 </template>
 
-                <el-menu-item index="#relayset">
+                <!-- <el-menu-item index="#relayset">
                     <el-icon>
                         <List />
                     </el-icon>
                     <template #title>转发规则</template>
+                </el-menu-item> -->
+
+                <el-menu-item index="#portforward">
+                    <el-icon>
+                        <List />
+                    </el-icon>
+                    <template #title>转发规则列表</template>
                 </el-menu-item>
+
+                <el-menu-item index="#portforwardset">
+                    <el-icon>
+                        <List />
+                    </el-icon>
+                    <template #title>设置</template>
+                </el-menu-item>
+
             </el-sub-menu>
 
             <el-sub-menu index="#reverseproxy">
                 <template #title>
                     <el-icon>
-                        <Position />
+                        <Connection />
                     </el-icon>
                     <span>反向代理</span>
                 </template>
@@ -56,6 +71,7 @@
                     </el-icon>
                     <template #title>反向代理规则列表</template>
                 </el-menu-item>
+
             </el-sub-menu>
 
             <el-sub-menu index="#ddns">
@@ -81,10 +97,47 @@
                 </el-menu-item>
             </el-sub-menu>
 
+            <el-sub-menu index="#wol">
+                <template #title>
+                    <el-icon>
+                        <Bell />
+                    </el-icon>
+                    <span>网络唤醒</span>
+                </template>
+
+
+                <el-menu-item index="#wol">
+                    <el-icon>
+                        <Bell />
+                    </el-icon>
+                    <template #title>网络唤醒设备列表</template>
+                </el-menu-item>
+
+                <el-menu-item index="#wolset">
+                    <el-icon>
+                        <setting />
+                    </el-icon>
+                    <template #title>网络唤醒设置</template>
+                </el-menu-item>
+
+                </el-sub-menu>
+
+
+
 
             <el-divider style="margin-top: 0px;margin-bottom: 0px;" />
 
+
+
             <el-sub-menu index="#safe">
+                <template #title>
+                    <el-icon>
+                        <Guide />
+                    </el-icon>
+                    <span>安全相关</span>
+                </template>
+
+                <el-sub-menu index="#safe">
                 <template #title>
                     <el-icon>
                         <Guide />
@@ -114,6 +167,22 @@
                 </el-menu-item>
 
             </el-sub-menu>
+
+            <el-menu-item index="#ssl">
+                <el-icon>
+                    <Lock />
+                </el-icon>
+                <template #title>SSL证书</template>
+            </el-menu-item>
+
+
+            </el-sub-menu>
+            
+
+
+
+
+
             
 
             <el-menu-item index="#set">

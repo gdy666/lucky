@@ -339,6 +339,45 @@ export function apiGetConfigure() {
 	})
 }
 
+export function apiDeleteSSL(key) {
+    return httpRequest({
+		url: '/api/ssl',
+		method: 'delete',
+		method: 'delete',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:key}
+	})
+}
+
+export function apiAddSSL(data) {
+    return httpRequest({
+		url: '/api/ssl',
+		method: 'post',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiAlterSSL(key,field,value) {
+    return httpRequest({
+		url: '/api/ssl',
+		method: 'put',
+		headers:{'Authorization':GetToken()},
+		params:{key:key,field:field,value:value},
+	})
+}
+
+export function apiGetSSLList(data) {
+    return httpRequest({
+		url: '/api/ssl',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}
+
+
+
 
 export function apiAddReverseProxyRule(data) {
     return httpRequest({
@@ -402,5 +441,132 @@ export function apiReverseProxyRuleLogs(ruleKey,proxyKey,pageSize,page) {
 			proxyKey:proxyKey,
 			pageSize:pageSize,
 			page:page}
+	})
+}
+
+
+//-------------------------------------------------
+
+export function apiGetPortForwardRuleList() {
+    return httpRequest({
+		url: '/api/portforwards',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}
+
+export function apiAddPortForwardRule(data) {
+    return httpRequest({
+		url: '/api/portforward',
+		method: 'post',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiDeletePortForwardRule(key) {
+    return httpRequest({
+		url: '/api/portforward',
+		method: 'delete',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:key}
+	})
+}
+
+export function apiAlterPortForwardRule(data) {
+    return httpRequest({
+		url: '/api/portforward',
+		method: 'put',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiPortForwardRuleEnable(key,enable) {
+    return httpRequest({
+		url: '/api/portforward/enable',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),enable:enable,key:key}
+	})
+}
+
+export function apiQueryPortForwardConfigure() {
+    return httpRequest({
+		url: '/api/portforward/configure',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}
+
+export function apiAlterPortForwardConfigure(data) {
+    return httpRequest({
+		url: '/api/portforward/configure',
+		method: 'put',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiPortforwardRuleLogs(key,pageSize,page) {
+    return httpRequest({
+		url: '/api/portforward/logs',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{
+			_:new Date().valueOf(),
+			key:key,
+			pageSize:pageSize,
+			page:page}
+	})
+}
+
+
+//-----------------
+
+export function apiGetWOLDeviceList() {
+    return httpRequest({
+		url: '/api/wol/devices',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf()}
+	})
+}
+
+export function apiAddWOLDevice(data) {
+    return httpRequest({
+		url: '/api/wol/device',
+		method: 'post',
+		headers:{'Authorization':GetToken()},
+		data:data
+	})
+}
+
+export function apiDeleteWOLDevice(key) {
+    return httpRequest({
+		url: '/api/wol/device',
+		method: 'delete',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:key}
+	})
+}
+
+export function apiWOLDeviceWakeUp(key) {
+    return httpRequest({
+		url: '/api/wol/device/wakeup',
+		method: 'get',
+		headers:{'Authorization':GetToken()},
+		params:{_:new Date().valueOf(),key:key}
+	})
+}
+
+export function apiAlterWOLDevice(data) {
+    return httpRequest({
+		url: '/api/wol/device',
+		method: 'put',
+		headers:{'Authorization':GetToken()},
+		data:data
 	})
 }

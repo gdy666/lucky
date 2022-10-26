@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"golang.org/x/net/proxy"
@@ -239,6 +240,13 @@ func NewTransport(transportNetwork,
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
 				LocalAddr: localAddr,
+				Control: func(network, address string, c syscall.RawConn) error {
+					//	fmt.Printf("network:%s\taddress:%s\n", network, address)
+					if network != transportNetwork && transportNetwork != "tcp" {
+						return fmt.Errorf("must use :%s", transportNetwork)
+					}
+					return nil
+				},
 			})
 
 			transport = &http.Transport{

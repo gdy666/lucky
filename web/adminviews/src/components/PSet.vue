@@ -10,11 +10,14 @@
             <div class="formradius" :style="{
                 borderRadius: 'base',
             }">
+            
+            
 
                 <el-form :model="form" class="SetForm" label-width="auto">
-                    <el-form-item label="后台管理端口" id="adminListen">
-                        <el-input-number v-model="form.AdminWebListenPort" autocomplete="off" />
-                    </el-form-item>
+                    
+                <div class="AdminListenDivRadius">
+
+                    <p>后台管理入口设置</p>
 
                     <el-form-item label="外网访问" id="adminListen">
                         <el-switch v-model="form.AllowInternetaccess" class="mb-1" inline-prompt
@@ -22,6 +25,30 @@
                             active-text="允许" inactive-text="禁止" />
                     </el-form-item>
 
+                    <el-form-item label="端口(http)" id="adminListen">
+                        <el-input-number v-model="form.AdminWebListenPort" autocomplete="off" />
+                    </el-form-item>
+
+                    <el-form-item label="TLS端口(https)" id="adminListen">
+                        <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
+                            <template #content>
+                                外网访问时建议使用https端口访问<br />
+                                自行确认启用前先添加对应域名的SSL证书<br />
+                                保存修改或增删SSL证书后请手动重启程序使得设置或证书生效<br />
+                            </template>
+                        <el-switch v-model="form.AdminWebListenTLS" class="mb-1" inline-prompt
+                             width="50px"
+                            active-text="启用" inactive-text="禁用" />
+                        </el-tooltip>
+                    </el-form-item>
+
+                    <el-form-item label="端口(https)" id="adminListen" v-show="form.AdminWebListenTLS">
+                        <el-input-number v-model="form.AdminWebListenHttpsPort" autocomplete="off" />
+                    </el-form-item>
+
+                </div>
+
+                <div class="AdminListenDivRadius">
                     <el-form-item label="管理登录账号" id="adminAccount">
                         <el-input v-model="form.AdminAccount" placeholder="管理登录账号" autocomplete="off"
                             style="witdh:390px;" />
@@ -30,19 +57,24 @@
                     <el-form-item label="管理登录密码" id="adminPassword">
                         <el-input v-model="form.AdminPassword" placeholder="管理登录密码" autocomplete="off" />
                     </el-form-item>
+                </div>
 
+                <div class="AdminListenDivRadius">
                     <el-form-item label="日志记录最大条数" id="logMaxSize">
                         <el-input-number v-model="form.LogMaxSize" autocomplete="off" :min="1024" :max="40960" />
                     </el-form-item>
+                </div>
 
 
-                    <el-form-item label="全局最大端口代理数量" id="proxyCountLimit">
+
+
+                    <!-- <el-form-item label="全局最大端口代理数量" id="proxyCountLimit">
                         <el-input-number v-model="form.ProxyCountLimit" autocomplete="off" :min="1" :max="1024" />
                     </el-form-item>
 
                     <el-form-item label="全局最大连接数" id="globalMaxConnections">
                         <el-input-number v-model="form.GlobalMaxConnections" autocomplete="off" :min="1" :max="65535" />
-                    </el-form-item>
+                    </el-form-item> -->
 
 
 
@@ -115,7 +147,7 @@ const callRestoreConfigureAPI = (res: any, uploadFile: any, uploadFiles: any) =>
     let fileName  = res.file
 
     ElMessageBox.confirm(
-        "确认要将[" + fileName + "]替换为大吉现有配置?替换完成后大吉会自动重启",
+        "确认要将[" + fileName + "]替换为Lucky现有配置?替换完成后Lucky会自动重启",
         'Warning',
         {
             confirmButtonText: '确认',
@@ -126,11 +158,11 @@ const callRestoreConfigureAPI = (res: any, uploadFile: any, uploadFiles: any) =>
         .then(() => {
             apiGetRestoreConfigureConfirm(res.restoreConfigureKey).then(res => {
                 if (res.ret != 0) {
-                    MessageShow("error", "将[" + fileName + "]替换为大吉现有配置出错:" + res.msg)
+                    MessageShow("error", "将[" + fileName + "]替换为Lucky现有配置出错:" + res.msg)
                     return
                 }
 
-                MessageShow("success", "将[" + fileName + "]替换为大吉现有配置成功")
+                MessageShow("success", "将[" + fileName + "]替换为Lucky现有配置成功")
 
                 setTimeout(() => {
                     window.location.href = window.location.protocol + "//" + window.location.hostname + ":" + res.port;
@@ -138,7 +170,7 @@ const callRestoreConfigureAPI = (res: any, uploadFile: any, uploadFiles: any) =>
 
             }).catch((error) => {
                 console.log("网络出错:" + error)
-                MessageShow("error", "将[" + res.file + "]替换为大吉现有配置出错:" + error)
+                MessageShow("error", "将[" + res.file + "]替换为Lucky现有配置出错:" + error)
             })
 
         })
@@ -149,10 +181,12 @@ const callRestoreConfigureAPI = (res: any, uploadFile: any, uploadFiles: any) =>
 
 const rawData = {
     AdminWebListenPort: 1,
+    AdminWebListenTLS:false,
+    AdminWebListenHttpsPort:16626,
     AdminAccount: "",
     AdminPassword: "",
-    ProxyCountLimit: 1,
-    GlobalMaxConnections: 1,
+    // ProxyCountLimit: 1,
+    // GlobalMaxConnections: 1,
     AllowInternetaccess: false,
     LogMaxSize:1024,
 }
@@ -189,8 +223,8 @@ const resetFormData = () => {
     form.value.AdminWebListenPort = preFormData.value.AdminWebListenPort
     form.value.AdminAccount = preFormData.value.AdminAccount
     form.value.AdminPassword = preFormData.value.AdminPassword
-    form.value.ProxyCountLimit = preFormData.value.ProxyCountLimit
-    form.value.GlobalMaxConnections = preFormData.value.GlobalMaxConnections
+    //form.value.ProxyCountLimit = preFormData.value.ProxyCountLimit
+    //form.value.GlobalMaxConnections = preFormData.value.GlobalMaxConnections
     form.value.AllowInternetaccess = preFormData.value.AllowInternetaccess
 }
 
@@ -198,8 +232,8 @@ const syncToPreFormData = (data: any) => {
     preFormData.value.AdminWebListenPort = data.value.AdminWebListenPort
     preFormData.value.AdminAccount = data.value.AdminAccount
     preFormData.value.AdminPassword = data.value.AdminPassword
-    preFormData.value.ProxyCountLimit = data.value.ProxyCountLimit
-    preFormData.value.GlobalMaxConnections = data.value.GlobalMaxConnections
+   // preFormData.value.ProxyCountLimit = data.value.ProxyCountLimit
+   // preFormData.value.GlobalMaxConnections = data.value.GlobalMaxConnections
     preFormData.value.AllowInternetaccess = data.value.AllowInternetaccess
 }
 
@@ -280,6 +314,20 @@ onMounted(() => {
 
 
 <style scoped>
+
+.AdminListenDivRadius {
+    border: 2px solid var(--el-border-color);
+    border-radius: 10px;
+    margin-left: 3px;
+    margin-top: 15px;
+    margin-right: 3px;
+    margin-bottom: 15px;
+    width: 456;
+    padding-top: 9px;
+    padding-left: 9px;
+    padding-right: 9px;
+}
+
 .SetForm {
     margin-top: 15px;
     margin-left: 20px;

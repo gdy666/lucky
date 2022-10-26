@@ -46,12 +46,15 @@ declare module '@vue/runtime-core' {
     Log: typeof import('./src/components/Log.vue')['default']
     Login: typeof import('./src/components/Login.vue')['default']
     Pmenu: typeof import('./src/components/Pmenu.vue')['default']
+    PortForward: typeof import('./src/components/PortForward.vue')['default']
+    PortForwardSet: typeof import('./src/components/PortForwardSet.vue')['default']
     PSet: typeof import('./src/components/PSet.vue')['default']
-    RelaySet: typeof import('./src/components/RelaySet.vue')['default']
     ReverseProxy: typeof import('./src/components/ReverseProxy.vue')['default']
+    SSL: typeof import('./src/components/SSL.vue')['default']
     Status: typeof import('./src/components/Status.vue')['default']
     WhiteLists: typeof import('./src/components/WhiteLists.vue')['default']
     WhiteListSet: typeof import('./src/components/WhiteListSet.vue')['default']
+    WOL: typeof import('./src/components/tools/WOL.vue')['default']
   }
 }
 

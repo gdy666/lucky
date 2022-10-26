@@ -69,19 +69,6 @@ func alterReverseProxyRule(c *gin.Context) {
 		return
 	}
 
-	// needStop := false
-	// if preRule != nil &&
-	// 	(preRule.Network != requestObj.Network ||
-	// 		preRule.ListenPort != requestObj.ListenPort ||
-	// 		preRule.Enable != requestObj.Enable ||
-	// 		!requestObj.Enable) {
-	// 	needStop = true
-	// }
-
-	// if needStop {
-
-	// }
-
 	reverseproxy.EnableRuleByKey(requestObj.RuleKey, false)
 	//reverseproxy.FlushCache(requestObj.RuleKey)
 	if requestObj.Enable {

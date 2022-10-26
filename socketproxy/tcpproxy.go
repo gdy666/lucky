@@ -7,6 +7,8 @@ import (
 	"net"
 	"strings"
 	"sync"
+
+	"github.com/sirupsen/logrus"
 )
 
 type TCPProxy struct {
@@ -20,20 +22,18 @@ type TCPProxy struct {
 	connMapMutex sync.Mutex
 }
 
-func CreateTCPProxy(proxyType, listenIP, targetIP string, balanceTargetAddressList *[]string, listenPort, targetPort int, options *RelayRuleOptions) *TCPProxy {
+func CreateTCPProxy(log *logrus.Logger, proxyType, listenIP string, targetAddressList []string, listenPort, targetPort int, options *RelayRuleOptions) *TCPProxy {
 	p := &TCPProxy{}
 	p.ProxyType = proxyType
 	p.listenIP = listenIP
 	p.listenPort = listenPort
-	p.targetIP = targetIP
+	p.targetAddressList = targetAddressList
 	p.targetPort = targetPort
-	if balanceTargetAddressList != nil {
-		p.balanceTargetAddressList = *balanceTargetAddressList
-	}
+	p.log = log
 
 	p.safeMode = options.SafeMode
 
-	p.SetMaxConnections(options.SingleProxyMaxConnections)
+	p.SetMaxConnections(options.SingleProxyMaxTCPConnections)
 	return p
 }
 
@@ -41,24 +41,26 @@ func (p *TCPProxy) GetStatus() string {
 	return fmt.Sprintf("%s\nactivity connections:[%d]", p.String(), p.GetCurrentConnections())
 }
 
-// func (p *TCPProxy) CheckConns() bool {
-// 	if GetGlobalTCPConns() >= tcpGlobalMaxConnections || p.GetCurrentConnections() >= p.TcpSingleProxyMaxConns {
-// 		// if p.GetGlobalTCPConns() >= tcpGlobalMaxConnections {
-// 		// 	log.Println("")
-// 		// }
-// 		// if p.GetCurrentTCPConns() >= p.TcpSingleProxyMaxConns {
-// 		// 	log.Printf("超出单代理TCP限制")
-// 		// }
-// 		return false
-// 	}
-// 	return true
-// }
+func (p *TCPProxy) CheckConnectionsLimit() error {
+
+	if GetGlobalTCPPortForwardConnections() >= GetGlobalTCPPortforwardMaxConnections() {
+		return fmt.Errorf("超出TCP最大总连接数[%d]限制", GetGlobalTCPPortforwardMaxConnections())
+	}
+
+	if p.GetCurrentConnections() >= p.SingleProxyMaxConnections {
+		return fmt.Errorf("超出单端口TCP最大连接数[%d]限制", p.SingleProxyMaxConnections)
+	}
+
+	//全局,单端口限制
+	return nil
+}
 
 func (p *TCPProxy) StartProxy() {
 	p.listenConnMutex.Lock()
 	defer p.listenConnMutex.Unlock()
 	if p.listenConn != nil {
-		log.Printf("proxy %s is started", p.String())
+		//log.Printf("proxy %s is started", p.String())
+		p.log.Warnf("proxy %s is started", p.String())
 		return
 	}
 
@@ -69,16 +71,16 @@ func (p *TCPProxy) StartProxy() {
 
 	if err != nil {
 		if strings.Contains(err.Error(), "Only one usage of each socket address") {
-			log.Printf("监听IP端口[%s]已被占用,proxy[%s]启动失败", p.GetListentAddress(), p.String())
+			p.log.Errorf("监听IP端口[%s]已被占用,proxy[%s]启动失败", p.GetListentAddress(), p.String())
 		} else {
-			log.Printf("Cannot start proxy[%s]:%s", p.String(), err)
+			p.log.Errorf("Cannot start proxy[%s]:%s", p.String(), err)
 		}
 		return
 	}
 
 	p.listenConn = ln
 
-	log.Printf("[proxy][start][%s]", p.String())
+	p.log.Infof("[端口转发][开启][%s]", p.String())
 
 	go func() {
 		for {
@@ -88,36 +90,32 @@ func (p *TCPProxy) StartProxy() {
 				if strings.Contains(err.Error(), "use of closed network connection") {
 					break
 				}
-				log.Printf(" Cannot accept connection due to error %s", err.Error())
+				p.log.Errorf(" Cannot accept connection due to error %s", err.Error())
+				continue
+			}
+
+			err = p.CheckConnectionsLimit()
+			if err != nil {
+				//p.PrintConnectionsInfo()
+				p.log.Warnf("[%s]超出最大连接数限制,不再接受新连接:%s", p.GetKey(), err.Error())
+				newConn.Close()
 				continue
 			}
 
 			newConnAddr := newConn.RemoteAddr().String()
 			if !p.SafeCheck(newConnAddr) {
-				log.Printf("[%s]新连接 [%s]安全检查未通过", p.GetKey(), newConnAddr)
+				p.log.Warnf("[%s]新连接 [%s]安全检查未通过", p.GetKey(), newConnAddr)
 				newConn.Close()
 				continue
 			}
-			//log.Printf("[%s]新连接[%s]安全检查通过", p.GetKey(), newConnAddr)
 
-			//fmt.Printf("连接IP:[%s]\n", newConn.RemoteAddr().String())
-
-			//log.Printf("new tdp connection %s@%s [%s]===>%s", p.ProxyType, p.ListentAddress, newConn.RemoteAddr().String(), p.TargetAddress)
-			if !p.CheckConnections() {
-				//log.Printf("超出最大连接数限制\n")
-				p.PrintConnectionsInfo()
-				log.Printf("[%s]超出最大连接数限制,不再接受新连接", p.GetKey())
-				newConn.Close()
-				continue
-			}
+			p.log.Infof("[%s]新连接[%s]安全检查通过", p.GetKey(), newConnAddr)
 
 			p.connMapMutex.Lock()
 			p.connMap[newConn.RemoteAddr().String()] = newConn
 			p.connMapMutex.Unlock()
 
-			//atomic.AddInt64(&tcpconnections, 1)
 			p.AddCurrentConnections(1)
-			//fmt.Printf("当前全局TCP连接数:%d\n", p.GetGlobalTCPConns())
 			go p.handle(newConn)
 		}
 	}()
@@ -134,7 +132,7 @@ func (p *TCPProxy) StopProxy() {
 	p.listenConnMutex.Lock()
 	defer p.listenConnMutex.Unlock()
 	defer func() {
-		log.Printf("[proxy][stop][%s]", p.String())
+		p.log.Infof("[端口转发][关闭][%s]", p.String())
 	}()
 	if p.listenConn == nil {
 		return
@@ -152,7 +150,6 @@ func (p *TCPProxy) StopProxy() {
 }
 
 func (p *TCPProxy) handle(conn net.Conn) {
-
 	//dialer := net.Dialer{Timeout: 10 * time.Second}
 	//targetConn, err := dialer.Dial("tcp", p.TargetAddress)
 	targetConn, err := net.Dial("tcp", p.GetTargetAddress())
@@ -166,7 +163,9 @@ func (p *TCPProxy) handle(conn net.Conn) {
 
 		p.connMapMutex.Lock()
 		delete(p.connMap, conn.RemoteAddr().String())
+		p.log.Infof("[%s]%s 断开连接", p.GetKey(), conn.RemoteAddr().String())
 		p.connMapMutex.Unlock()
+
 	}()
 
 	if err != nil {

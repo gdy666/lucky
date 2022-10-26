@@ -34,6 +34,11 @@
                         <el-button color="#409eff" size="small" v-show="true">
                             {{ rule.ListenPort }}
                         </el-button>
+
+                        
+                        <el-button :type="rule.EnableTLS!=true?'info':'primary'" size="small" v-show="true">
+                            {{ rule.EnableTLS==true?'TLS已启用':'TLS未启用' }}
+                        </el-button>
                     </el-descriptions-item>
 
                     <el-descriptions-item label="规则操作" :span="2">
@@ -96,7 +101,7 @@
                             <el-button color="#409eff" size="small" v-show="true">
                                 {{
                                 (rule.DefaultProxy.Locations==undefined||rule.DefaultProxy.Locations==null)||rule.DefaultProxy.Locations.length
-                                <=0?'未设置默认规则后端地址':rule.DefaultProxy.Locations.length==1?rule.DefaultProxy.Locations[0]:rule.DefaultProxy.Locations[0]+'...等多个'}}
+                                <=0?'未设置':rule.DefaultProxy.Locations.length==1?rule.DefaultProxy.Locations[0]:rule.DefaultProxy.Locations[0]+'...'}}
                                     </el-button>
                         </el-tooltip>
                     </el-descriptions-item>
@@ -140,7 +145,8 @@
                             <template #content v-if="!rule.DefaultProxy.EnableBasicAuth">
                                 Basic认证未启用<br />
                             </template>
-                            <el-button color="#6666ff" size="small" v-show="true">
+                            <el-button color="#6666ff" size="small"
+                            v-show="true" :disabled="rule.DefaultProxy.EnableBasicAuth == true ? false : true">
                                 {{ rule.DefaultProxy.EnableBasicAuth==false?'Basic认证未启用':'Basic认证已启用' }}
                             </el-button>
                         </el-tooltip>
@@ -186,7 +192,7 @@
                                     <span v-html="StrArrayListToBrHtml(proxy.Domains)"></span>
                                 </template>
                                 <el-button color="#409eff" size="small" v-show="true">
-                                    {{ proxy.Domains.length==1?proxy.Domains[0]:proxy.Domains[0]+' ...等多个' }}
+                                    {{ proxy.Domains.length==1?proxy.Domains[0]:proxy.Domains[0]+' ...' }}
                                 </el-button>
                             </el-tooltip>
                         </el-descriptions-item>
@@ -197,7 +203,7 @@
                                     <span v-html="StrArrayListToBrHtml(proxy.Locations)"></span>
                                 </template>
                                 <el-button color="#409eff" size="small" v-show="true">
-                                    {{ proxy.Locations.length==1?proxy.Locations[0]:proxy.Locations[0]+' ...等多个' }}
+                                    {{ proxy.Locations.length==1?proxy.Locations[0]:proxy.Locations[0]+' ...' }}
                                 </el-button>
                             </el-tooltip>
                         </el-descriptions-item>
@@ -227,7 +233,7 @@
                                 <template #content v-if="!proxy.EnableBasicAuth">
                                     Basic认证未启用<br />
                                 </template>
-                                <el-button color="#6666ff" size="small" v-show="true">
+                                <el-button color="#6666ff" size="small" v-show="true" :disabled="proxy.EnableBasicAuth == true ? false : true">
                                     {{ proxy.EnableBasicAuth==false?'Basic认证未启用':'Basic认证已启用' }}
                                 </el-button>
                             </el-tooltip>
@@ -306,10 +312,16 @@
                         <el-input-number v-model="ruleForm.ListenPort" autocomplete="off" />
                     </el-form-item>
 
-                    <el-form-item label="TLS" label-width="auto" v-if="false">
+                    <el-tooltip class="box-item" effect="dark" :trigger-keys="[]" content="">
+                                    <template #content>
+                                        启用前请先添加SSL证书<br/>
+                                        增加删除证书后需要重启规则新证书才生效<br/>
+                                    </template>
+                    <el-form-item label="TLS" label-width="auto" v-if="true">
                         <el-switch v-model="ruleForm.EnableTLS" inline-prompt width="50px" active-text="启用"
                             inactive-text="禁用" />
                     </el-form-item>
+                </el-tooltip>
 
 
 
@@ -974,11 +986,6 @@
                 {{reverseProxyLogsDialogLogsContentView}}
 
             </el-scrollbar>
-
-
-            <!-- <p v-for="log in reverseProxyLogsDialogData">
-            {{log.LogTime}} &nbsp; &nbsp; &nbsp; {{log.LogContent}}
-        </p> -->
 
 
             <el-pagination :page-size=reverseProxyLogsPageSize :page-sizes="[10,20,50, 100, 200, 300,400,500]" :small="false"
@@ -1803,7 +1810,7 @@ onUnmounted(() => {
     margin-left: 3px;
     margin-top: 3px;
     margin-right: 3px;
-    margin-bottom: 25px;
+    margin-bottom: 10px;
     min-width: 1350px;
 }
 

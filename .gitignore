@@ -15,6 +15,9 @@ lucky
 *.out
 *.log
 *.upx
+*.pem
+*.crt
+*.key
 lucky.conf
 
 # Dependency directories (remove the comment below to include it)

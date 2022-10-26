@@ -17,7 +17,6 @@
           <el-main id="pageContent">
             <Log v-if="global.currentPage.value=='#log'?true:false"></Log>
             <Status v-if="global.currentPage.value=='#status'?true:false"></Status>
-            <Relayset v-if="global.currentPage.value=='#relayset'?true:false"></Relayset>
             <Pset v-if="global.currentPage.value=='#set'?true:false"></Pset>
             <Login v-if="global.currentPage.value=='#login'?true:false"></Login>
             <WhiteListSet v-if="global.currentPage.value=='#whitelistset'?true:false"></WhiteListSet>
@@ -26,7 +25,11 @@
             <DDNS v-if="global.currentPage.value=='#ddnstasklist'?true:false"></DDNS>
             <DDNSSet v-if="global.currentPage.value=='#ddnsset'?true:false"></DDNSSet>
             <ReverseProxy v-if="global.currentPage.value=='#reverseproxylist'?true:false"></ReverseProxy>
+            <SSL v-if="global.currentPage.value=='#ssl'?true:false"></SSL>
             <About v-if="global.currentPage.value=='#about'?true:false"></About>
+            <PortForward v-if="global.currentPage.value=='#portforward'"></PortForward>
+            <PortForwardSet v-if="global.currentPage.value=='#portforwardset'"></PortForwardSet>
+            <WOL v-if="global.currentPage.value=='#wol'"></WOL>
           </el-main>
 
         </el-container>
@@ -43,7 +46,6 @@ import { onMounted,ref,inject ,computed } from 'vue'
 import Status from './components/status.vue'
 import Log from './components/log.vue';
 import Pmenu from './components/pmenu.vue';
-import Relayset from './components/relayset.vue';
 import Pset from './components/pset.vue';
 import Login from './components/login.vue';
 import WhiteListSet from './components/WhiteListSet.vue';
@@ -52,9 +54,10 @@ import BlackLists from './components/BlackLists.vue';
 import DDNS from './components/DDNS.vue';
 import ReverseProxy from './components/reverseproxy.vue';
 
+
 import {apiGetVersion} from "./apis/utils.js"
 import DDNSSet from './components/DDNSSet.vue';
-
+import SSL from './components/SSL.vue'
 
 //console.log("111") 
 

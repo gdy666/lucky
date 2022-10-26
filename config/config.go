@@ -43,31 +43,30 @@ func FlushLoginRandomKey() {
 	loginRandomkey = stringsp.GetRandomString(16)
 }
 
-type ConfigureRelayRule struct {
-	Name         string                       `json:"Name"`
-	Configurestr string                       `json:"Configurestr"`
-	Enable       bool                         `json:"Enable"`
-	Options      socketproxy.RelayRuleOptions `json:"Options"`
-}
-
 type BaseConfigure struct {
-	AdminWebListenPort   int    `json:"AdminWebListenPort"`   //管理后台端口
-	ProxyCountLimit      int64  `json:"ProxyCountLimit"`      //全局代理数量限制
-	AdminAccount         string `json:"AdminAccount"`         //登录账号
-	AdminPassword        string `json:"AdminPassword"`        //登录密码
-	AllowInternetaccess  bool   `json:"AllowInternetaccess"`  //允许外网访问
-	GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大连接数
-	LogMaxSize           int    `json:"LogMaxSize"`           //日志记录最大条数
+	AdminWebListenPort      int  `json:"AdminWebListenPort"`      //管理后台端口
+	AdminWebListenTLS       bool `json:"AdminWebListenTLS"`       //启用TLS监听端口
+	AdminWebListenHttpsPort int  `json:"AdminWebListenHttpsPort"` //管理后台Https端口
+
+	//ProxyCountLimit      int64  `json:"ProxyCountLimit"`      //全局代理数量限制
+	AdminAccount        string `json:"AdminAccount"`        //登录账号
+	AdminPassword       string `json:"AdminPassword"`       //登录密码
+	AllowInternetaccess bool   `json:"AllowInternetaccess"` //允许外网访问
+	//GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大连接数
+	LogMaxSize int `json:"LogMaxSize"` //日志记录最大条数
 }
 
 type ProgramConfigure struct {
-	BaseConfigure        BaseConfigure        `json:"BaseConfigure"`
-	RelayRuleList        []ConfigureRelayRule `json:"RelayRuleList"`
-	WhiteListConfigure   WhiteListConfigure   `json:"WhiteListConfigure"`
-	BlackListConfigure   BlackListConfigure   `json:"BlackListConfigure"`
-	DDNSConfigure        DDNSConfigure        `json:"DDNSConfigure"`        //DDNS 参数设置
-	DDNSTaskList         []DDNSTask           `json:"DDNSTaskList"`         //DDNS任务列表
-	ReverseProxyRuleList []ReverseProxyRule   `json:"ReverseProxyRuleList"` //反向代理规则列表
+	BaseConfigure         BaseConfigure         `json:"BaseConfigure"`
+	WhiteListConfigure    WhiteListConfigure    `json:"WhiteListConfigure"`
+	BlackListConfigure    BlackListConfigure    `json:"BlackListConfigure"`
+	DDNSConfigure         DDNSConfigure         `json:"DDNSConfigure"`         //DDNS 参数设置
+	DDNSTaskList          []DDNSTask            `json:"DDNSTaskList"`          //DDNS任务列表
+	ReverseProxyRuleList  []ReverseProxyRule    `json:"ReverseProxyRuleList"`  //反向代理规则列表
+	SSLCertficateList     []SSLCertficate       `json:"SSLCertficateList"`     //SSL证书列表
+	PortForwardsRuleList  []PortForwardsRule    `json:"PortForwardsRuleList"`  //端口转发规则列表
+	PortForwardsConfigure PortForwardsConfigure `json:"PortForwardsConfigure"` //端口转发设置
+	WOLDeviceList         []WOLDevice           `json:"WOLDeviceList"`         //网络唤醒设备列表
 }
 
 var programConfigureMutex sync.RWMutex
@@ -88,12 +87,6 @@ func GetAuthAccount() map[string]string {
 	accountInfo := make(map[string]string)
 	accountInfo[programConfigure.BaseConfigure.AdminAccount] = programConfigure.BaseConfigure.AdminPassword
 	return accountInfo
-}
-
-func SetConfigRuleList(ruleList *[]ConfigureRelayRule) {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	programConfigure.RelayRuleList = *ruleList
 }
 
 func GetRunMode() string {
@@ -146,14 +139,51 @@ func GetDDNSConfigure() DDNSConfigure {
 	return conf
 }
 
+func GetPortForwardsConfigure() PortForwardsConfigure {
+	programConfigureMutex.RLock()
+	defer programConfigureMutex.RUnlock()
+	conf := programConfigure.PortForwardsConfigure
+	return conf
+}
+
+func SetPortForwardsConfigure(conf *PortForwardsConfigure) error {
+	programConfigureMutex.Lock()
+	defer programConfigureMutex.Unlock()
+
+	if conf.PortForwardsLimit < 0 {
+		conf.PortForwardsLimit = 0
+	} else if conf.PortForwardsLimit > 1024 {
+		conf.PortForwardsLimit = 1024
+	}
+
+	if conf.TCPPortforwardMaxConnections < 0 {
+		conf.TCPPortforwardMaxConnections = 0
+	} else if conf.TCPPortforwardMaxConnections > 4096 {
+		conf.TCPPortforwardMaxConnections = 4096
+	}
+
+	if conf.UDPReadTargetDataMaxgoroutineCount < 0 {
+		conf.UDPReadTargetDataMaxgoroutineCount = 0
+	} else if conf.UDPReadTargetDataMaxgoroutineCount > 4096 {
+		conf.UDPReadTargetDataMaxgoroutineCount = 4096
+	}
+
+	programConfigure.PortForwardsConfigure = *conf
+
+	socketproxy.SetGlobalMaxPortForwardsCountLimit(conf.PortForwardsLimit)
+	socketproxy.SetGlobalTCPPortforwardMaxConnections(conf.TCPPortforwardMaxConnections)
+	socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(conf.UDPReadTargetDataMaxgoroutineCount)
+	return Save()
+}
+
 // 保存基础配置
 func SetBaseConfigure(conf *BaseConfigure) error {
 	programConfigureMutex.Lock()
 	defer programConfigureMutex.Unlock()
 	programConfigure.BaseConfigure = *conf
 
-	socketproxy.SetGlobalMaxConnections(conf.GlobalMaxConnections)
-	socketproxy.SetGlobalMaxProxyCount(conf.ProxyCountLimit)
+	//socketproxy.SetGlobalMaxConnections(conf.GlobalMaxConnections)
+	//socketproxy.SetGlobalMaxPortForwardsCount(conf.ProxyCountLimit)
 
 	if conf.LogMaxSize < minLogSize {
 		conf.LogMaxSize = minLogSize
@@ -200,16 +230,27 @@ func Read(filePath string) (err error) {
 		return err
 	}
 
-	if pc.BaseConfigure.GlobalMaxConnections <= 0 {
-		pc.BaseConfigure.GlobalMaxConnections = socketproxy.DEFAULT_GLOBAL_MAX_CONNECTIONS
+	if pc.PortForwardsConfigure.PortForwardsLimit <= 0 {
+		pc.PortForwardsConfigure.PortForwardsLimit = socketproxy.DEFAULT_MAX_PORTFORWARDS_LIMIT
+	}
+	if pc.PortForwardsConfigure.TCPPortforwardMaxConnections <= 0 {
+		pc.PortForwardsConfigure.TCPPortforwardMaxConnections = socketproxy.DEFAULT_GLOBAL_MAX_CONNECTIONS
 	}
 
-	if pc.BaseConfigure.ProxyCountLimit <= 0 {
-		pc.BaseConfigure.ProxyCountLimit = socketproxy.DEFAULT_MAX_PROXY_COUNT
+	if pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount <= 0 {
+		pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount = socketproxy.DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount
 	}
+
+	socketproxy.SetGlobalMaxPortForwardsCountLimit(pc.PortForwardsConfigure.PortForwardsLimit)
+	socketproxy.SetGlobalTCPPortforwardMaxConnections(pc.PortForwardsConfigure.TCPPortforwardMaxConnections)
+	socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount)
 
 	if pc.BaseConfigure.AdminWebListenPort <= 0 {
 		pc.BaseConfigure.AdminWebListenPort = 16601
+	}
+
+	if pc.BaseConfigure.AdminWebListenHttpsPort <= 0 {
+		pc.BaseConfigure.AdminWebListenHttpsPort = 16626
 	}
 
 	if pc.BaseConfigure.LogMaxSize < minLogSize {
@@ -223,11 +264,8 @@ func Read(filePath string) (err error) {
 	return nil
 }
 
-func LoadDefault(proxyCountLimit int64,
-	adminWebListenPort int,
-	globalMaxConnections int64) {
-
-	programConfigure = loadDefaultConfigure(proxyCountLimit, adminWebListenPort, globalMaxConnections)
+func LoadDefault(adminWebListenPort int) {
+	programConfigure = loadDefaultConfigure(adminWebListenPort)
 }
 
 func Save() (err error) {
@@ -281,17 +319,13 @@ func readProgramConfigure(filePath string) (conf *ProgramConfigure, err error) {
 }
 
 func loadDefaultConfigure(
-	proxyCountLimit int64,
-	adminWebListenPort int,
-	globalMaxConnections int64) *ProgramConfigure {
+	adminWebListenPort int) *ProgramConfigure {
 
 	baseConfigure := BaseConfigure{AdminWebListenPort: adminWebListenPort,
-		GlobalMaxConnections: globalMaxConnections,
-		AdminAccount:         defaultAdminAccount,
-		AdminPassword:        defaultAdminPassword,
-		ProxyCountLimit:      proxyCountLimit,
-		AllowInternetaccess:  false,
-		LogMaxSize:           defaultLogSize}
+		AdminAccount:        defaultAdminAccount,
+		AdminPassword:       defaultAdminPassword,
+		AllowInternetaccess: false,
+		LogMaxSize:          defaultLogSize}
 
 	whiteListConfigure := WhiteListConfigure{BaseConfigure: WhiteListBaseConfigure{ActivelifeDuration: 36, BasicAccount: defaultAdminAccount, BasicPassword: defaultAdminPassword}}
 
@@ -299,13 +333,21 @@ func loadDefaultConfigure(
 	pc.BaseConfigure = baseConfigure
 	pc.WhiteListConfigure = whiteListConfigure
 
-	if pc.BaseConfigure.GlobalMaxConnections <= 0 {
-		pc.BaseConfigure.GlobalMaxConnections = socketproxy.DEFAULT_GLOBAL_MAX_CONNECTIONS
+	if pc.PortForwardsConfigure.PortForwardsLimit <= 0 {
+		pc.PortForwardsConfigure.PortForwardsLimit = socketproxy.DEFAULT_MAX_PORTFORWARDS_LIMIT
+	}
+	socketproxy.SetGlobalMaxPortForwardsCountLimit(pc.PortForwardsConfigure.PortForwardsLimit)
+
+	if pc.PortForwardsConfigure.TCPPortforwardMaxConnections <= 0 {
+		pc.PortForwardsConfigure.TCPPortforwardMaxConnections = socketproxy.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS
+	}
+	socketproxy.SetGlobalTCPPortforwardMaxConnections(pc.PortForwardsConfigure.TCPPortforwardMaxConnections)
+
+	if pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount <= 0 {
+		pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount = socketproxy.DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount
 	}
 
-	if pc.BaseConfigure.ProxyCountLimit <= 0 {
-		pc.BaseConfigure.ProxyCountLimit = socketproxy.DEFAULT_MAX_PROXY_COUNT
-	}
+	socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount)
 
 	if pc.BaseConfigure.AdminWebListenPort <= 0 {
 		pc.BaseConfigure.AdminWebListenPort = defaultAdminListenPort

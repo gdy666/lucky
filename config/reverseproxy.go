@@ -1,6 +1,7 @@
 package config
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -19,30 +20,11 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var reverseProxyLogsStore map[string]*logsbuffer.LogsBuffer
-var reverseProxyLogsStoreMu sync.Mutex
-
 var reverseProxyServerStore sync.Map
 var reverseProxyServerStoreMu sync.Mutex
 
 func init() {
-	reverseProxyLogsStore = make(map[string]*logsbuffer.LogsBuffer)
-}
 
-func CreateReverseProxyLogbuffer(key string, buffSize int) *logsbuffer.LogsBuffer {
-	reverseProxyLogsStoreMu.Lock()
-	defer reverseProxyLogsStoreMu.Unlock()
-	var buf *logsbuffer.LogsBuffer
-	var ok bool
-	if buf, ok = reverseProxyLogsStore[key]; !ok {
-		buf = &logsbuffer.LogsBuffer{}
-		buf.SetBufferSize(buffSize)
-		reverseProxyLogsStore[key] = buf
-	} else if buf.GetBufferSize() != buffSize {
-		buf.SetBufferSize(buffSize)
-	}
-
-	return buf
 }
 
 // TidyReverseProxyCache 整理反向代理日志缓存
@@ -59,18 +41,26 @@ func TidyReverseProxyCache() {
 	}
 
 	keyListStr := keyListBuffer.String()
-	reverseProxyLogsStoreMu.Lock()
-	defer reverseProxyLogsStoreMu.Unlock()
+	logsbuffer.LogsBufferStoreMu.Lock()
+	defer logsbuffer.LogsBufferStoreMu.Unlock()
 
 	var needDeleteKeys []string
-	for k := range reverseProxyLogsStore {
-		if !strings.Contains(keyListStr, k) {
+	for k := range logsbuffer.LogsBufferStore {
+		if !strings.HasPrefix(k, "reverseproxy:") {
+			continue
+		}
+
+		if len(k) <= 13 {
+			continue
+		}
+
+		if !strings.Contains(keyListStr, k[13:]) {
 			needDeleteKeys = append(needDeleteKeys, k)
 		}
 	}
 
 	for i := range needDeleteKeys {
-		delete(reverseProxyLogsStore, needDeleteKeys[i])
+		delete(logsbuffer.LogsBufferStore, needDeleteKeys[i])
 		reverseProxyServerStore.Delete(needDeleteKeys[i])
 	}
 
@@ -85,12 +75,11 @@ type SubReverProxyRule struct {
 	locationsCount int         `json:"-"`
 	locationIndex  uint64      `json:"-"`
 
-	EnableAccessLog            bool   `json:"EnableAccessLog"`            //开启日志
-	LogLevel                   int    `json:"LogLevel"`                   //日志输出级别
-	LogOutputToConsole         bool   `json:"LogOutputToConsole"`         //日志输出到终端
-	AccessLogMaxNum            int    `json:"AccessLogMaxNum"`            //最大条数
-	WebListShowLastLogMaxCount int    `json:"WebListShowLastLogMaxCount"` //前端列表显示最新日志最大条数
-	RequestInfoLogFormat       string `json:"RequestInfoLogFormat"`       //请求信息在日志中的格式
+	EnableAccessLog            bool `json:"EnableAccessLog"`            //开启日志
+	LogLevel                   int  `json:"LogLevel"`                   //日志输出级别
+	LogOutputToConsole         bool `json:"LogOutputToConsole"`         //日志输出到终端
+	AccessLogMaxNum            int  `json:"AccessLogMaxNum"`            //最大条数
+	WebListShowLastLogMaxCount int  `json:"WebListShowLastLogMaxCount"` //前端列表显示最新日志最大条数
 
 	ForwardedByClientIP bool         `json:"ForwardedByClientIP"`
 	TrustedCIDRsStrList []string     `json:"TrustedCIDRsStrList"`
@@ -163,12 +152,13 @@ func (r *SubReverProxyRule) Logf(level logrus.Level, c *gin.Context, format stri
 	}).Logf(level, format, v...)
 }
 
-func (r *SubReverProxyRule) HandlerReverseProxy(remote *url.URL, path string, c *gin.Context) {
+func (r *SubReverProxyRule) HandlerReverseProxy(remote *url.URL, host, path string, c *gin.Context) {
 
 	proxy := httputil.NewSingleHostReverseProxy(remote)
 	proxy.Director = func(req *http.Request) {
 		req.Header = c.Request.Header
-		req.Host = remote.Host
+		req.Host = host //remote.Host
+		//req.Host = remote.Host
 		req.URL.Scheme = remote.Scheme
 		req.URL.Host = remote.Host
 		req.URL.Path = path
@@ -182,21 +172,23 @@ func (r *SubReverProxyRule) HandlerReverseProxy(remote *url.URL, path string, c 
 
 }
 
-func (r *SubReverProxyRule) PrintfToConsole(entry *logrus.Entry) error {
+func (r *SubReverProxyRule) Fire(entry *logrus.Entry) error {
 	if !r.LogOutputToConsole {
 		return nil
 	}
-
 	s, _ := entry.String()
 	log.Print(s)
 	return nil
+}
+
+func (r *SubReverProxyRule) Levels() []logrus.Level {
+	return logrus.AllLevels
 }
 
 func (r *SubReverProxyRule) GetLogrus() *logrus.Logger {
 	if r.logrus == nil {
 		r.logrus = logrus.New()
 		r.logrus.SetLevel(logrus.Level(r.LogLevel))
-		r.GetLogsBuffer().SetFireCallback(r.PrintfToConsole)
 		r.logrus.SetOutput(r.GetLogsBuffer())
 		r.logrus.SetFormatter(&logrus.JSONFormatter{
 			TimestampFormat:   "2006-01-02 15:04:05",
@@ -204,8 +196,7 @@ func (r *SubReverProxyRule) GetLogrus() *logrus.Logger {
 			DisableHTMLEscape: true,
 			DataKey:           "ExtInfo",
 		})
-
-		r.logrus.AddHook(r.GetLogsBuffer())
+		r.logrus.AddHook(r)
 
 	}
 	return r.logrus
@@ -220,7 +211,7 @@ func (r *SubReverProxyRule) GetLogger() *log.Logger {
 
 func (r *SubReverProxyRule) GetLogsBuffer() *logsbuffer.LogsBuffer {
 	if r.logsBuffer == nil {
-		r.logsBuffer = CreateReverseProxyLogbuffer(r.Key, r.AccessLogMaxNum)
+		r.logsBuffer = logsbuffer.CreateLogbuffer("reverseproxy:"+r.Key, r.AccessLogMaxNum)
 	}
 	return r.logsBuffer
 }
@@ -313,7 +304,7 @@ func (r *ReverseProxyRule) ReverseProxyHandler(c *gin.Context) {
 		c.JSON(http.StatusBadGateway, gin.H{"ret": 1, "msg": fmt.Sprintf("后端地址[%s] 转换出错:%s", location, err.Error())})
 		return
 	}
-	subRule.HandlerReverseProxy(remote, path, c)
+	subRule.HandlerReverseProxy(remote, hostName, path, c)
 
 }
 
@@ -390,6 +381,18 @@ func (r *ReverseProxyRule) ServerStart() error {
 		Handler: ginR,
 	}
 
+	//***************************
+	var err error
+	server.TLSConfig = &tls.Config{}
+
+	if r.EnableTLS {
+		certList := GetValidSSLCertficateList()
+		server.TLSConfig.Certificates = certList
+	}
+	//server.TLSConfig.Certificates = make([]tls.Certificate, 3)
+
+	//****************************
+
 	ln, err := net.Listen(r.Network, r.Addr())
 	if err != nil {
 		return err
@@ -398,14 +401,26 @@ func (r *ReverseProxyRule) ServerStart() error {
 	var serveResult error
 
 	go func() {
-		serveResult = server.Serve(ln)
+
+		if !r.EnableTLS {
+			serveResult = server.Serve(ln)
+			return
+		}
+
+		if len(server.TLSConfig.Certificates) <= 0 {
+			log.Printf("可用证书列表为空,%s 未能启用TLS", r.Addr())
+			serveResult = server.Serve(ln)
+			return
+		}
+		log.Printf("%s 已启用TLS", r.Addr())
+		serveResult = server.ServeTLS(ln, "", "")
+
 	}()
 
 	<-time.After(time.Millisecond * 300)
 
 	defer func() {
 		if serveResult == nil {
-			//setPreReverseProxyHttpServer(r.RuleKey, r.server)
 			r.SetServer(server)
 		}
 	}()
@@ -561,7 +576,7 @@ type LogItem struct {
 }
 
 // 2006-01-02 15:04:05
-func ReverseProxyLogConvert(lg *logsbuffer.LogItem) any {
+func WebLogConvert(lg *logsbuffer.LogItem) any {
 	l := LogItem{
 		LogContent: lg.Content,
 		LogTime:    time.Unix(lg.Timestamp/int64(time.Second), 0).Format("2006-01-02 15:04:05")}
@@ -570,11 +585,11 @@ func ReverseProxyLogConvert(lg *logsbuffer.LogItem) any {
 
 func (r *ReverseProxyRule) GetLastLogs() map[string][]any {
 	res := make(map[string][]any)
-	res["default"] = r.DefaultProxy.GetLogsBuffer().GetLastLogs(ReverseProxyLogConvert, r.DefaultProxy.WebListShowLastLogMaxCount)
+	res["default"] = r.DefaultProxy.GetLogsBuffer().GetLastLogs(WebLogConvert, r.DefaultProxy.WebListShowLastLogMaxCount)
 
 	for i := range r.ProxyList {
 		res[r.ProxyList[i].Key] = r.ProxyList[i].GetLogsBuffer().GetLastLogs(
-			ReverseProxyLogConvert, r.ProxyList[i].WebListShowLastLogMaxCount)
+			WebLogConvert, r.ProxyList[i].WebListShowLastLogMaxCount)
 	}
 	return res
 }
@@ -601,6 +616,7 @@ func GetReverseProxyRuleByKey(ruleKey string) *ReverseProxyRule {
 	ruleIndex := -1
 
 	for i := range programConfigure.ReverseProxyRuleList {
+
 		if programConfigure.ReverseProxyRuleList[i].RuleKey == ruleKey {
 			ruleIndex = i
 			break
@@ -609,6 +625,7 @@ func GetReverseProxyRuleByKey(ruleKey string) *ReverseProxyRule {
 	if ruleIndex == -1 {
 		return nil
 	}
+
 	res := programConfigure.ReverseProxyRuleList[ruleIndex]
 	return &res
 }
@@ -635,7 +652,7 @@ func ReverseProxyRuleListDelete(ruleKey string) error {
 	}
 
 	if ruleIndex == -1 {
-		return fmt.Errorf("找不到需要删除的DDNS任务")
+		return fmt.Errorf("找不到需要删除的反向代理任务")
 	}
 
 	programConfigure.ReverseProxyRuleList = DeleteReverseProxyRuleListlice(programConfigure.ReverseProxyRuleList, ruleIndex)
@@ -647,7 +664,7 @@ func EnableReverseProxyRuleByKey(ruleKey string, enable bool) error {
 	defer programConfigureMutex.Unlock()
 	ruleIndex := -1
 
-	for i := range programConfigure.DDNSTaskList {
+	for i := range programConfigure.ReverseProxyRuleList {
 		if programConfigure.ReverseProxyRuleList[i].RuleKey == ruleKey {
 			ruleIndex = i
 			break
@@ -666,7 +683,7 @@ func EnableReverseProxySubRule(ruleKey, proxyKey string, enable bool) error {
 	defer programConfigureMutex.Unlock()
 	ruleIndex := -1
 
-	for i := range programConfigure.DDNSTaskList {
+	for i := range programConfigure.ReverseProxyRuleList {
 		if programConfigure.ReverseProxyRuleList[i].RuleKey == ruleKey {
 			ruleIndex = i
 			break
@@ -699,7 +716,7 @@ func UpdateReverseProxyRulet(rule ReverseProxyRule) error {
 	defer programConfigureMutex.Unlock()
 	ruleIndex := -1
 
-	for i := range programConfigure.DDNSTaskList {
+	for i := range programConfigure.ReverseProxyRuleList {
 		if programConfigure.ReverseProxyRuleList[i].RuleKey == rule.RuleKey {
 			ruleIndex = i
 			break

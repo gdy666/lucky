@@ -111,7 +111,7 @@
                                 </template>
                                 <el-button color="#409eff" size="default">
                                     {{ task.TaskState.WebhookCallTime == "" ? '从未触发' :
-                                            task.TaskState.WebhookCallTime
+                                    task.TaskState.WebhookCallTime
                                     }}
                                 </el-button>
                             </el-tooltip>
@@ -172,7 +172,8 @@
                         <el-descriptions-item label="域名">
                             <el-button color="#409eff" size="default"
                                 @click="copyDomain(domain.SubDomain, domain.DomainName)">
-                                {{ domain.SubDomain == '' ? domain.DomainName : domain.SubDomain + "." + domain.DomainName }}
+                                {{ domain.SubDomain == '' ? domain.DomainName : domain.SubDomain + "." +
+                                domain.DomainName }}
                             </el-button>
                         </el-descriptions-item>
 
@@ -185,7 +186,8 @@
 
                                 </template>
 
-                                <el-button :type="domain.UpdateStatus == '失败' ? 'danger' : task.Enable ? 'success' : 'info'"
+                                <el-button
+                                    :type="domain.UpdateStatus == '失败' ? 'danger' : task.Enable ? 'success' : 'info'"
                                     size="small">
                                     {{ task.Enable ? domain.UpdateStatus : '停止同步' }}
                                 </el-button>
@@ -568,6 +570,17 @@
 
 
                             </div>
+
+                        </div>
+
+                        <p>DNS接口调用额外设置</p>
+                        <div class="fromitemChildDivRadius">
+                            <el-form-item label="DNS接口调用使用的网络类型" label-width="auto">
+                                <el-select v-model="DDNSForm.DNS.CallAPINetwork" class="m-2" placeholder="请选择">
+                                    <el-option v-for="item in TCPNetworkTypeList" :key="item.value" :label="item.label"
+                                        :value="item.value" />
+                                </el-select>
+                            </el-form-item>
 
                         </div>
 
@@ -991,7 +1004,7 @@
                 <span class="dialog-footer">
                     <el-button @click="addDDNSDialogVisible = false">取消</el-button>
                     <el-button type="primary" @click="exeAddOrAlterDDNSOption">{{ DDNSFormOptionType == "add" ? '添加' :
-                            '修改'
+                    '修改'
                     }}
                     </el-button>
                 </span>
@@ -1156,6 +1169,21 @@ const DNSCallbackServerList = [
     {
         value: 'other',
         label: '其它',
+    },
+]
+
+const TCPNetworkTypeList = [
+    {
+        value: '',
+        label: 'tcp',
+    },
+    {
+        value: 'tcp4',
+        label: 'tcp4',
+    },
+    {
+        value: 'tcp6',
+        label: 'tcp6',
     },
 ]
 
@@ -1584,6 +1612,7 @@ const DDNSForm = ref(
             Secret: "",
             ForceInterval: 3600,
             ResolverDoaminCheck: false,
+            CallAPINetwork: "",
             DNSServerList: [""],
             HttpClientProxyType: "",
             HttpClientProxyAddr: "",
@@ -1634,6 +1663,7 @@ const preDDNSFrom = ref(
             ResolverDoaminCheck: false,
             DNSServerList: [''],
             HttpClientProxyType: "",
+            CallAPINetwork: "",
             HttpClientProxyAddr: "",
             HttpClientProxyUser: "",
             HttpClientProxyPassword: "",
@@ -1701,6 +1731,7 @@ const showAddOrAlterDDNSTaskDialog = (optionType: string, task: any) => {
                 ResolverDoaminCheck: true,
                 DNSServerList: [],
                 HttpClientProxyType: "",
+                CallAPINetwork: "",
                 HttpClientProxyAddr: "",
                 HttpClientProxyUser: "",
                 HttpClientProxyPassword: "",
@@ -1755,6 +1786,7 @@ const showAddOrAlterDDNSTaskDialog = (optionType: string, task: any) => {
                 ResolverDoaminCheck: true,
                 DNSServerList: [],
                 HttpClientProxyType: "",
+                CallAPINetwork: "",
                 HttpClientProxyAddr: "",
                 HttpClientProxyUser: "",
                 HttpClientProxyPassword: "",
@@ -1800,6 +1832,7 @@ const showAddOrAlterDDNSTaskDialog = (optionType: string, task: any) => {
             ResolverDoaminCheck: task.DNS.ResolverDoaminCheck,
             DNSServerList: task.DNS.DNSServerList,
             HttpClientProxyType: task.DNS.HttpClientProxyType,
+            CallAPINetwork: task.DNS.CallAPINetwork,
             HttpClientProxyAddr: task.DNS.HttpClientProxyAddr,
             HttpClientProxyUser: task.DNS.HttpClientProxyUser,
             HttpClientProxyPassword: task.DNS.HttpClientProxyPassword,
@@ -1852,6 +1885,7 @@ const showAddOrAlterDDNSTaskDialog = (optionType: string, task: any) => {
             ResolverDoaminCheck: task.DNS.ResolverDoaminCheck,
             DNSServerList: task.DNS.DNSServerList,
             HttpClientProxyType: task.DNS.HttpClientProxyType,
+            CallAPINetwork: task.DNS.CallAPINetwork,
             HttpClientProxyAddr: task.DNS.HttpClientProxyAddr,
             HttpClientProxyUser: task.DNS.HttpClientProxyUser,
             HttpClientProxyPassword: task.DNS.HttpClientProxyPassword,
@@ -2495,7 +2529,7 @@ onUnmounted(() => {
     margin-left: 3px;
     margin-top: 3px;
     margin-right: 3px;
-    margin-bottom: 25px;
+    margin-bottom: 5px;
     min-width: 1200px;
 
 }
