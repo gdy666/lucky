@@ -71,7 +71,7 @@
 
 ## OpenwrtIPK包安装
 
-    [下载页面](https://github.com/gdy666/luci-app-lucky/releases)
+- [Openwrt IPK包下载页面](https://github.com/gdy666/luci-app-lucky/releases)
 
     如果第一次安装不知道自己设备的CPU架构,可以先安装
     luci-app-lucky_XXX_all.ipk 和 luci-i18n-lucky-zh-cn_XXX_all.ipk
