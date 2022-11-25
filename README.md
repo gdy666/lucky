@@ -4,6 +4,7 @@
 - [Lucky(大吉)](#)
   - [特性](#特性)
   - [一键安装](#一键安装)
+  - [OpenwrtIPK包安装](#OpenwrtIPK包安装)
   - [使用](#使用)
   - [Docker中使用](#docker中使用)
   - [后台界面](#后台界面)
@@ -62,9 +63,23 @@
 
 
 
+
 ## 一键安装
 
 - [一键安装详看这里](https://github.com/gdy666/lucky-files)
+
+
+## OpenwrtIPK包安装
+
+- [下载页面](https://github.com/gdy666/luci-app-lucky/releases)
+
+如果第一次安装不知道自己设备的CPU架构,可以先安装
+luci-app-lucky_XXX_all.ipk 和 luci-i18n-lucky-zh-cn_XXX_all.ipk
+然后登录openwrt后台在菜单 服务---lucky 页面查看显示的CPU架构,
+然后安装相应架构的lucky_XXX_Openwrt_(CPU架构) IPK.
+
+如果原来已经通过一键脚本方式安装了lucky,请在安装ipk包之前卸载(重新执行一次一键安装指令,选项2卸载.)
+卸载lucky之前可以在lucky后台的设置页面下载备份配置.
 
 
 ## 使用
@@ -86,11 +101,7 @@
     lucky -c 666.conf -p 8899
     ```
 
-- 命令行直接运行转发规则,注意后台无法编辑修改命令行启动的转发规则,主要用在不带后台的精简版
-    ```bash
-    #指定后台端口8899 
-    lucky -p 8899 <转发规则1> <转发规则2> <转发规则3>...<<转发规则N>
-    ```
+
 
 
 ## Docker中使用
