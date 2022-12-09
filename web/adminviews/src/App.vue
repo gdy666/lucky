@@ -30,6 +30,7 @@
             <PortForward v-if="global.currentPage.value=='#portforward'"></PortForward>
             <PortForwardSet v-if="global.currentPage.value=='#portforwardset'"></PortForwardSet>
             <WOL v-if="global.currentPage.value=='#wol'"></WOL>
+            <WOLServiceSet v-if="global.currentPage.value=='#wolserviceset'"></WOLServiceSet>
           </el-main>
 
         </el-container>

@@ -113,11 +113,13 @@
                     <template #title>网络唤醒设备列表</template>
                 </el-menu-item>
 
-                <el-menu-item index="#wolset">
+
+
+                <el-menu-item index="#wolserviceset">
                     <el-icon>
                         <setting />
                     </el-icon>
-                    <template #title>网络唤醒设置</template>
+                    <template #title>唤醒/关机服务设置</template>
                 </el-menu-item>
 
                 </el-sub-menu>

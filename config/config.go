@@ -6,11 +6,19 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
 
-	"github.com/gdy666/lucky/socketproxy"
+	ddnsconf "github.com/gdy666/lucky/module/ddns/conf"
+	portforwardconf "github.com/gdy666/lucky/module/portforward/conf"
+	"github.com/gdy666/lucky/module/portforward/socketproxy"
+	reverseproxyconf "github.com/gdy666/lucky/module/reverseproxy/conf"
+	safeconf "github.com/gdy666/lucky/module/safe/conf"
+	sslconf "github.com/gdy666/lucky/module/sslcertficate/conf"
+	wolconf "github.com/gdy666/lucky/module/wol/conf"
+
 	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 )
@@ -54,23 +62,27 @@ type BaseConfigure struct {
 	AllowInternetaccess bool   `json:"AllowInternetaccess"` //允许外网访问
 	//GlobalMaxConnections int64  `json:"GlobalMaxConnections"` //全局最大连接数
 	LogMaxSize int `json:"LogMaxSize"` //日志记录最大条数
+
+	HttpClientSecureVerify bool `json:"HttpClientSecureVerify"`
+	HttpClientTimeout      int  `json:"HttpClientTimeout"`
 }
 
 type ProgramConfigure struct {
-	BaseConfigure         BaseConfigure         `json:"BaseConfigure"`
-	WhiteListConfigure    WhiteListConfigure    `json:"WhiteListConfigure"`
-	BlackListConfigure    BlackListConfigure    `json:"BlackListConfigure"`
-	DDNSConfigure         DDNSConfigure         `json:"DDNSConfigure"`         //DDNS 参数设置
-	DDNSTaskList          []DDNSTask            `json:"DDNSTaskList"`          //DDNS任务列表
-	ReverseProxyRuleList  []ReverseProxyRule    `json:"ReverseProxyRuleList"`  //反向代理规则列表
-	SSLCertficateList     []SSLCertficate       `json:"SSLCertficateList"`     //SSL证书列表
-	PortForwardsRuleList  []PortForwardsRule    `json:"PortForwardsRuleList"`  //端口转发规则列表
-	PortForwardsConfigure PortForwardsConfigure `json:"PortForwardsConfigure"` //端口转发设置
-	WOLDeviceList         []WOLDevice           `json:"WOLDeviceList"`         //网络唤醒设备列表
+	BaseConfigure         BaseConfigure                         `json:"BaseConfigure"`
+	WhiteListConfigure    safeconf.WhiteListConfigure           `json:"WhiteListConfigure"`
+	BlackListConfigure    safeconf.BlackListConfigure           `json:"BlackListConfigure"`
+	DDNSConfigure         ddnsconf.DDNSConfigure                `json:"DDNSConfigure"`         //DDNS 参数设置
+	DDNSTaskList          []ddnsconf.DDNSTask                   `json:"DDNSTaskList"`          //DDNS任务列表
+	ReverseProxyRuleList  []reverseproxyconf.ReverseProxyRule   `json:"ReverseProxyRuleList"`  //反向代理规则列表
+	SSLCertficateList     []sslconf.SSLCertficate               `json:"SSLCertficateList"`     //SSL证书列表
+	PortForwardsRuleList  []portforwardconf.PortForwardsRule    `json:"PortForwardsRuleList"`  //端口转发规则列表
+	PortForwardsConfigure portforwardconf.PortForwardsConfigure `json:"PortForwardsConfigure"` //端口转发设置
+	WOLDeviceList         []wolconf.WOLDevice                   `json:"WOLDeviceList"`         //网络唤醒设备列表
+	WOLServiceConfigure   wolconf.WOLServiceConfigure           `json:"WOLServiceConfigure"`   //网络唤醒客户端设置
 }
 
-var programConfigureMutex sync.RWMutex
-var programConfigure *ProgramConfigure
+var ConfigureMutex sync.RWMutex
+var Configure *ProgramConfigure
 var configurePath string
 
 // var readConfigureFileOnce sync.Once
@@ -82,10 +94,10 @@ var configureFileSign int8 = -1
 // }
 
 func GetAuthAccount() map[string]string {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
+	ConfigureMutex.RLock()
+	defer ConfigureMutex.RUnlock()
 	accountInfo := make(map[string]string)
-	accountInfo[programConfigure.BaseConfigure.AdminAccount] = programConfigure.BaseConfigure.AdminPassword
+	accountInfo[Configure.BaseConfigure.AdminAccount] = Configure.BaseConfigure.AdminPassword
 	return accountInfo
 }
 
@@ -98,27 +110,27 @@ func SetRunMode(mode string) {
 }
 
 func SetConfig(p *ProgramConfigure) error {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	programConfigure = p
+	ConfigureMutex.Lock()
+	defer ConfigureMutex.Unlock()
+	Configure = p
 	return Save()
 }
 
 func GetConfig() *ProgramConfigure {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
-	conf := *programConfigure
+	ConfigureMutex.RLock()
+	defer ConfigureMutex.RUnlock()
+	conf := *Configure
 	return &conf
 }
 
 func GetConfigureBytes() []byte {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
-	if programConfigure == nil {
+	ConfigureMutex.RLock()
+	defer ConfigureMutex.RUnlock()
+	if Configure == nil {
 		return []byte("{}")
 	}
 	//JSON.Pars
-	res, err := json.MarshalIndent(*programConfigure, "", "\t")
+	res, err := json.MarshalIndent(*Configure, "", "\t")
 	if err != nil {
 		return []byte("{}")
 	}
@@ -126,61 +138,17 @@ func GetConfigureBytes() []byte {
 }
 
 func GetBaseConfigure() BaseConfigure {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
-	baseConf := programConfigure.BaseConfigure
+	ConfigureMutex.RLock()
+	defer ConfigureMutex.RUnlock()
+	baseConf := Configure.BaseConfigure
 	return baseConf
-}
-
-func GetDDNSConfigure() DDNSConfigure {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
-	conf := programConfigure.DDNSConfigure
-	return conf
-}
-
-func GetPortForwardsConfigure() PortForwardsConfigure {
-	programConfigureMutex.RLock()
-	defer programConfigureMutex.RUnlock()
-	conf := programConfigure.PortForwardsConfigure
-	return conf
-}
-
-func SetPortForwardsConfigure(conf *PortForwardsConfigure) error {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-
-	if conf.PortForwardsLimit < 0 {
-		conf.PortForwardsLimit = 0
-	} else if conf.PortForwardsLimit > 1024 {
-		conf.PortForwardsLimit = 1024
-	}
-
-	if conf.TCPPortforwardMaxConnections < 0 {
-		conf.TCPPortforwardMaxConnections = 0
-	} else if conf.TCPPortforwardMaxConnections > 4096 {
-		conf.TCPPortforwardMaxConnections = 4096
-	}
-
-	if conf.UDPReadTargetDataMaxgoroutineCount < 0 {
-		conf.UDPReadTargetDataMaxgoroutineCount = 0
-	} else if conf.UDPReadTargetDataMaxgoroutineCount > 4096 {
-		conf.UDPReadTargetDataMaxgoroutineCount = 4096
-	}
-
-	programConfigure.PortForwardsConfigure = *conf
-
-	socketproxy.SetGlobalMaxPortForwardsCountLimit(conf.PortForwardsLimit)
-	socketproxy.SetGlobalTCPPortforwardMaxConnections(conf.TCPPortforwardMaxConnections)
-	socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(conf.UDPReadTargetDataMaxgoroutineCount)
-	return Save()
 }
 
 // 保存基础配置
 func SetBaseConfigure(conf *BaseConfigure) error {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-	programConfigure.BaseConfigure = *conf
+	ConfigureMutex.Lock()
+	defer ConfigureMutex.Unlock()
+	Configure.BaseConfigure = *conf
 
 	//socketproxy.SetGlobalMaxConnections(conf.GlobalMaxConnections)
 	//socketproxy.SetGlobalMaxPortForwardsCount(conf.ProxyCountLimit)
@@ -191,30 +159,12 @@ func SetBaseConfigure(conf *BaseConfigure) error {
 		conf.LogMaxSize = maxLogSize
 	}
 
-	return Save()
-}
-
-func SetDDNSConfigure(conf *DDNSConfigure) error {
-	programConfigureMutex.Lock()
-	defer programConfigureMutex.Unlock()
-
-	if conf.Intervals < 30 {
-		conf.Intervals = 30
+	if conf.HttpClientTimeout <= 0 {
+		conf.HttpClientTimeout = 1
+	} else if conf.HttpClientTimeout > 60 {
+		conf.HttpClientTimeout = 60
 	}
 
-	if conf.Intervals > 3600 {
-		conf.Intervals = 3600
-	}
-
-	if conf.FirstCheckDelay < 0 {
-		conf.FirstCheckDelay = 0
-	}
-
-	if conf.FirstCheckDelay > 3600 {
-		conf.FirstCheckDelay = 3600
-	}
-
-	programConfigure.DDNSConfigure = *conf
 	return Save()
 }
 
@@ -230,6 +180,13 @@ func Read(filePath string) (err error) {
 		return err
 	}
 
+	checkConfigue(pc)
+	Configure = pc
+
+	return nil
+}
+
+func checkConfigue(pc *ProgramConfigure) {
 	if pc.PortForwardsConfigure.PortForwardsLimit <= 0 {
 		pc.PortForwardsConfigure.PortForwardsLimit = socketproxy.DEFAULT_MAX_PORTFORWARDS_LIMIT
 	}
@@ -259,13 +216,43 @@ func Read(filePath string) (err error) {
 		pc.BaseConfigure.LogMaxSize = maxLogSize
 	}
 
-	programConfigure = pc
+	if pc.BaseConfigure.HttpClientTimeout <= 0 {
+		pc.BaseConfigure.HttpClientTimeout = 20
+	} else if pc.BaseConfigure.HttpClientTimeout > 60 {
+		pc.BaseConfigure.HttpClientTimeout = 60
+	}
 
-	return nil
+	if pc.WOLServiceConfigure.Client.Port <= 0 {
+		pc.WOLServiceConfigure.Client.Port = 9
+	}
+
+	if pc.WOLServiceConfigure.Client.Repeat <= 0 {
+		pc.WOLServiceConfigure.Client.Repeat = 5
+	}
+
+	if pc.WOLServiceConfigure.Client.DeviceName == "" {
+		hostname, _ := os.Hostname()
+		pc.WOLServiceConfigure.Client.DeviceName = hostname
+	}
+
+	if pc.WOLServiceConfigure.Client.PowerOffCMD == "" {
+		switch runtime.GOOS {
+		case "linux":
+			pc.WOLServiceConfigure.Client.PowerOffCMD = "poweroff"
+		case "windows":
+			pc.WOLServiceConfigure.Client.PowerOffCMD = "Shutdown /s /t 0"
+		default:
+			pc.WOLServiceConfigure.Client.PowerOffCMD = ""
+		}
+	}
+
+	if pc.WOLServiceConfigure.Server.Token == "" {
+		pc.WOLServiceConfigure.Server.Token = "666666"
+	}
 }
 
 func LoadDefault(adminWebListenPort int) {
-	programConfigure = loadDefaultConfigure(adminWebListenPort)
+	Configure = loadDefaultConfigure(adminWebListenPort)
 }
 
 func Save() (err error) {
@@ -284,7 +271,7 @@ func Save() (err error) {
 
 	}()
 
-	err = saveProgramConfig(programConfigure, configurePath)
+	err = saveProgramConfig(Configure, configurePath)
 	return
 }
 
@@ -327,39 +314,41 @@ func loadDefaultConfigure(
 		AllowInternetaccess: false,
 		LogMaxSize:          defaultLogSize}
 
-	whiteListConfigure := WhiteListConfigure{BaseConfigure: WhiteListBaseConfigure{ActivelifeDuration: 36, BasicAccount: defaultAdminAccount, BasicPassword: defaultAdminPassword}}
+	whiteListConfigure := safeconf.WhiteListConfigure{BaseConfigure: safeconf.WhiteListBaseConfigure{ActivelifeDuration: 36, BasicAccount: defaultAdminAccount, BasicPassword: defaultAdminPassword}}
 
 	var pc ProgramConfigure
 	pc.BaseConfigure = baseConfigure
 	pc.WhiteListConfigure = whiteListConfigure
 
-	if pc.PortForwardsConfigure.PortForwardsLimit <= 0 {
-		pc.PortForwardsConfigure.PortForwardsLimit = socketproxy.DEFAULT_MAX_PORTFORWARDS_LIMIT
-	}
-	socketproxy.SetGlobalMaxPortForwardsCountLimit(pc.PortForwardsConfigure.PortForwardsLimit)
+	checkConfigue(&pc)
 
-	if pc.PortForwardsConfigure.TCPPortforwardMaxConnections <= 0 {
-		pc.PortForwardsConfigure.TCPPortforwardMaxConnections = socketproxy.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS
-	}
-	socketproxy.SetGlobalTCPPortforwardMaxConnections(pc.PortForwardsConfigure.TCPPortforwardMaxConnections)
+	// if pc.PortForwardsConfigure.PortForwardsLimit <= 0 {
+	// 	pc.PortForwardsConfigure.PortForwardsLimit = socketproxy.DEFAULT_MAX_PORTFORWARDS_LIMIT
+	// }
+	// socketproxy.SetGlobalMaxPortForwardsCountLimit(pc.PortForwardsConfigure.PortForwardsLimit)
 
-	if pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount <= 0 {
-		pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount = socketproxy.DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount
-	}
+	// if pc.PortForwardsConfigure.TCPPortforwardMaxConnections <= 0 {
+	// 	pc.PortForwardsConfigure.TCPPortforwardMaxConnections = socketproxy.TCPUDP_DEFAULT_SINGLE_PROXY_MAX_CONNECTIONS
+	// }
+	// socketproxy.SetGlobalTCPPortforwardMaxConnections(pc.PortForwardsConfigure.TCPPortforwardMaxConnections)
 
-	socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount)
+	// if pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount <= 0 {
+	// 	pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount = socketproxy.DEFAULT_GLOBAL_UDPReadTargetDataMaxgoroutineCount
+	// }
 
-	if pc.BaseConfigure.AdminWebListenPort <= 0 {
-		pc.BaseConfigure.AdminWebListenPort = defaultAdminListenPort
-	}
+	// socketproxy.SetGlobalUDPReadTargetDataMaxgoroutineCountLimit(pc.PortForwardsConfigure.UDPReadTargetDataMaxgoroutineCount)
 
-	if pc.DDNSConfigure.Intervals < 30 {
-		pc.DDNSConfigure.Intervals = 30
-	}
+	// if pc.BaseConfigure.AdminWebListenPort <= 0 {
+	// 	pc.BaseConfigure.AdminWebListenPort = defaultAdminListenPort
+	// }
 
-	if pc.DDNSConfigure.FirstCheckDelay <= 0 {
-		pc.DDNSConfigure.FirstCheckDelay = 0
-	}
+	// if pc.DDNSConfigure.Intervals < 30 {
+	// 	pc.DDNSConfigure.Intervals = 30
+	// }
+
+	// if pc.DDNSConfigure.FirstCheckDelay <= 0 {
+	// 	pc.DDNSConfigure.FirstCheckDelay = 0
+	// }
 
 	return &pc
 }

@@ -3,7 +3,7 @@
 .PageRadius {
     height: 90vh;
     width: 100%;
-    max-width: 1300px;
+    max-width: 1600px;
     border: 1px solid var(--el-border-color);
     border-radius: 0;
     margin: 20px

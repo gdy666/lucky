@@ -65,6 +65,19 @@
                     </el-form-item>
                 </div>
 
+                <div class="AdminListenDivRadius">
+                    <p>全局设置</p>
+                    <el-form-item label="Http(s) 客户端 安全证书验证" id="adminListen">
+                        <el-switch v-model="form.HttpClientSecureVerify" class="mb-1" inline-prompt
+                            style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949" width="50px"
+                            active-text="启用" inactive-text="禁用" />
+                    </el-form-item>
+
+                    <el-form-item label="HttpClient timeout(秒)" >
+                        <el-input-number v-model="form.HttpClientTimeout" autocomplete="off" :min="1" :max="60" />
+                    </el-form-item>
+
+                </div>
 
 
 
@@ -189,6 +202,8 @@ const rawData = {
     // GlobalMaxConnections: 1,
     AllowInternetaccess: false,
     LogMaxSize:1024,
+    HttpClientSecureVerify:false,
+    HttpClientTimeout:20,
 }
 
 const form = ref(rawData)

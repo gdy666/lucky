@@ -5,12 +5,13 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gdy666/lucky/config"
+	ssl "github.com/gdy666/lucky/module/sslcertficate"
+	sslconf "github.com/gdy666/lucky/module/sslcertficate/conf"
 	"github.com/gin-gonic/gin"
 )
 
 func addSSL(c *gin.Context) {
-	var requestObj config.SSLCertficate
+	var requestObj sslconf.SSLCertficate
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
@@ -25,7 +26,7 @@ func addSSL(c *gin.Context) {
 	}
 
 	//fmt.Printf("CertsInfo:%v\n", *requestObj.CertsInfo)
-	err = config.SSLCertficateListAdd(&requestObj)
+	err = ssl.SSLCertficateListAdd(&requestObj)
 	if err != nil {
 		log.Printf("config.SSLCertficateListAdd error:%s", err.Error())
 		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": fmt.Sprintf("添加SSL证书出错!:%s", err.Error())})
@@ -37,15 +38,15 @@ func addSSL(c *gin.Context) {
 }
 
 type sslResInfo struct {
-	Key       string             `json:"Key"`
-	Remark    string             `json:"Remark"`
-	Enable    bool               `json:"Enable"`
-	AddTime   string             `json:"AddTime"`
-	CertsInfo *[]config.CertInfo `json:"CertsInfo"`
+	Key       string              `json:"Key"`
+	Remark    string              `json:"Remark"`
+	Enable    bool                `json:"Enable"`
+	AddTime   string              `json:"AddTime"`
+	CertsInfo *[]sslconf.CertInfo `json:"CertsInfo"`
 }
 
 func getSSLCertficateList(c *gin.Context) {
-	rawList := config.GetSSLCertficateList()
+	rawList := ssl.GetSSLCertficateList()
 	var res []sslResInfo
 	for i := range rawList {
 		info := sslResInfo{
@@ -74,11 +75,11 @@ func alterSSLCertficate(c *gin.Context) {
 			if value == "true" {
 				enable = true
 			}
-			err = config.SSLCertficateEnable(key, enable)
+			err = ssl.SSLCertficateEnable(key, enable)
 		}
 	case "remark":
 		{
-			err = config.SSLCertficateAlterRemark(key, value)
+			err = ssl.SSLCertficateAlterRemark(key, value)
 		}
 	default:
 		err = fmt.Errorf("不支持修改的字段:%s", field)
@@ -93,7 +94,7 @@ func alterSSLCertficate(c *gin.Context) {
 
 func deleteSSLCertficate(c *gin.Context) {
 	key := c.Query("key")
-	err := config.SSLCertficateListDelete(key)
+	err := ssl.SSLCertficateListDelete(key)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
 		return

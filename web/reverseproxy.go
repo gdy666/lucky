@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gdy666/lucky/config"
-	"github.com/gdy666/lucky/reverseproxy"
+	"github.com/gdy666/lucky/module/reverseproxy"
+	reverseproxyconf "github.com/gdy666/lucky/module/reverseproxy/conf"
 	"github.com/gdy666/lucky/thirdlib/gdylib/stringsp"
 	"github.com/gin-gonic/gin"
 )
@@ -20,7 +20,7 @@ func reverseProxys(c *gin.Context) {
 }
 
 func addReverseProxyRule(c *gin.Context) {
-	var requestObj config.ReverseProxyRule
+	var requestObj reverseproxyconf.ReverseProxyRule
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
@@ -33,7 +33,7 @@ func addReverseProxyRule(c *gin.Context) {
 		return
 	}
 
-	err = config.ReverseProxyRuleListAdd(&requestObj)
+	err = reverseproxy.ReverseProxyRuleListAdd(&requestObj)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": fmt.Sprintf("添加反向代理规则失败:%s", err.Error())})
@@ -48,7 +48,7 @@ func addReverseProxyRule(c *gin.Context) {
 }
 
 func alterReverseProxyRule(c *gin.Context) {
-	var requestObj config.ReverseProxyRule
+	var requestObj reverseproxyconf.ReverseProxyRule
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		fmt.Printf("fff:%s\n", err.Error())
@@ -62,7 +62,7 @@ func alterReverseProxyRule(c *gin.Context) {
 		return
 	}
 
-	err = config.UpdateReverseProxyRulet(requestObj)
+	err = reverseproxy.UpdateReverseProxyRulet(requestObj)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": fmt.Sprintf("修改反向代理规则失败:%s", err.Error())})
@@ -75,7 +75,7 @@ func alterReverseProxyRule(c *gin.Context) {
 		reverseproxy.EnableRuleByKey(requestObj.RuleKey, true)
 	}
 
-	config.TidyReverseProxyCache()
+	reverseproxy.TidyReverseProxyCache()
 
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
 }
@@ -90,13 +90,13 @@ func deleteReverseProxyRule(c *gin.Context) {
 		return
 	}
 
-	err = config.ReverseProxyRuleListDelete(ruleKey)
+	err = reverseproxy.ReverseProxyRuleListDelete(ruleKey)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 3, "msg": fmt.Sprintf("删除反向代理规则出错:%s", err.Error())})
 		return
 	}
 
-	config.TidyReverseProxyCache()
+	reverseproxy.TidyReverseProxyCache()
 
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
 }
@@ -127,7 +127,7 @@ func enableReverseProxyRule(c *gin.Context) {
 		return
 	}
 
-	err := config.EnableReverseProxySubRule(ruleKey, proxyKey, enable)
+	err := reverseproxy.EnableReverseProxySubRule(ruleKey, proxyKey, enable)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
 		return
@@ -136,7 +136,7 @@ func enableReverseProxyRule(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": ""})
 }
 
-func checkReverseProxyRuleRequest(rule *config.ReverseProxyRule) error {
+func checkReverseProxyRuleRequest(rule *reverseproxyconf.ReverseProxyRule) error {
 	// if len(rule.ProxyList) <= 0 {
 	// 	return fmt.Errorf("至少添加一条反向代理转发规则")
 	// }

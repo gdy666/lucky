@@ -6,19 +6,27 @@ import (
 	"flag"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
+	"sync"
 	"time"
 
 	"github.com/gdy666/lucky/config"
-	"github.com/gdy666/lucky/ddns"
-	"github.com/gdy666/lucky/reverseproxy"
-	"github.com/gdy666/lucky/socketproxy"
+	"github.com/gdy666/lucky/module/ddns"
+	"github.com/gdy666/lucky/module/ddns/ddnsgo"
+	"github.com/gdy666/lucky/module/portforward"
+	"github.com/gdy666/lucky/module/portforward/socketproxy"
+	"github.com/gdy666/lucky/module/reverseproxy"
+	"github.com/gdy666/lucky/module/safe"
+	"github.com/gdy666/lucky/module/service"
+	ssl "github.com/gdy666/lucky/module/sslcertficate"
+	"github.com/gdy666/lucky/module/wol"
+	"github.com/gdy666/lucky/web"
+	kservice "github.com/kardianos/service"
 )
 
 var (
 	listenPort       = flag.Int("p", 16601, "http Admin Web listen port ")
 	configureFileURL = flag.String("c", "", "configure file url")
+	disableService   = flag.Bool("ds", false, "disable service mode ")
 )
 
 var (
@@ -33,10 +41,49 @@ var runTime time.Time
 func init() {
 	var cstZone = time.FixedZone("CST", 8*3600) // 东八
 	time.Local = cstZone
+
+	service.RegisterStartFunc(run)
 }
 
 func main() {
 	flag.Parse()
+	service.SetListenPort(*listenPort)
+	service.SetConfigureFile(*configureFileURL)
+
+	s, _ := service.GetService()
+
+	if s != nil && !*disableService {
+		status, _ := s.Status()
+		//fmt.Printf("status:%d\n", status)
+		if status != kservice.StatusUnknown {
+			log.Printf("以服务形式运行\n")
+			if status == kservice.StatusStopped {
+				log.Printf("调用启动lucky windows服务")
+				service.Start()
+				log.Printf("本窗口5秒后退出,lucky将以windows后台服务方式启动.")
+				<-time.After(time.Second * 5)
+				os.Exit(0)
+			}
+			s.Run()
+			os.Exit(0)
+		}
+	}
+
+	run()
+	var w sync.WaitGroup
+	w.Add(1)
+	w.Wait()
+
+	// err := service.UninstallService()
+	// if err != nil {
+	// 	fmt.Printf("%s\n", err.Error())
+	// }
+	//
+
+}
+
+func run() {
+
 	config.InitAppInfo(version, date)
 
 	err := config.Read(*configureFileURL)
@@ -54,15 +101,13 @@ func main() {
 
 	gcf := config.GetConfig()
 
-	config.BlackListInit()
-	config.WhiteListInit()
-	config.SSLCertficateListInit()
+	safe.Init()
+	ssl.Init()
 
-	//fmt.Printf("*gcf:%v\n", *gcf)
+	wol.Init(web.GetLogger())
 
-	socketproxy.SetSafeCheck(config.SafeCheck)
-	//socketproxy.SetGlobalMaxConnections(gcf.BaseConfigure.GlobalMaxConnections)
-	//socketproxy.SetGlobalMaxProxyCount(gcf.BaseConfigure.ProxyCountLimit)
+	socketproxy.SetSafeCheck(safe.SafeCheck)
+
 	config.SetRunMode(runMode)
 	config.SetVersion(version)
 	log.Printf("RunMode:%s\n", runMode)
@@ -72,60 +117,24 @@ func main() {
 
 	runTime = time.Now()
 
-	//LoadRuleFromConfigFile(gcf)
+	portforward.Init()
 
-	config.PortForwardsRuleListInit()
-
-	//config.DDNSTaskListTaskDetailsInit()
-	config.DDNSTaskListConfigureCheck()
-	ddnsConf := config.GetDDNSConfigure()
+	ddnsgo.DDNSTaskListConfigureCheck()
+	ddnsConf := ddnsgo.GetDDNSConfigure()
 	if ddnsConf.Enable {
 		go ddns.Run(time.Duration(ddnsConf.FirstCheckDelay)*time.Second, time.Duration(ddnsConf.Intervals)*time.Second)
 	}
 
 	reverseproxy.InitReverseProxyServer()
 
-	//ddns.RunTimer(time.Second, time.Second*30)
-
-	//initProxyList()
-
-	//*****************
-	// time.Sleep(time.Microsecond * 50)
-	// cruuentPath, _ := fileutils.GetCurrentDirectory()
-
-	// panicFile := fmt.Sprintf("%s/relayport_panic.log", cruuentPath)
-	// fileutils.PanicRedirect(panicFile)
-	//*****************
-
 	//main goroutine wait
-	sigs := make(chan os.Signal, 1)
-	exit := make(chan bool, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sigs
-		exit <- true
-	}()
-	<-exit
+	// sigs := make(chan os.Signal, 1)
+	// exit := make(chan bool, 1)
+	// signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	// go func() {
+	// 	<-sigs
+	// 	exit <- true
+	// }()
+	// <-exit
+
 }
-
-// func LoadRuleFromConfigFile(pc *config.ProgramConfigure) {
-// 	if pc == nil {
-// 		return
-// 	}
-// 	for i := range pc.RelayRuleList {
-// 		relayRule, err := rule.CreateRuleByConfigureAndOptions(
-// 			pc.RelayRuleList[i].Name,
-// 			pc.RelayRuleList[i].Configurestr,
-// 			pc.RelayRuleList[i].Options)
-// 		if err != nil {
-// 			continue
-// 		}
-// 		relayRule.From = "configureFile" //规则来源
-// 		relayRule.IsEnable = pc.RelayRuleList[i].Enable
-
-// 		_, e := rule.AddRuleToGlobalRuleList(false, *relayRule)
-// 		if e != nil {
-// 			log.Printf("%s\n", e)
-// 		}
-// 	}
-// }

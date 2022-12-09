@@ -55,6 +55,7 @@ declare module '@vue/runtime-core' {
     WhiteLists: typeof import('./src/components/WhiteLists.vue')['default']
     WhiteListSet: typeof import('./src/components/WhiteListSet.vue')['default']
     WOL: typeof import('./src/components/tools/WOL.vue')['default']
+    WOLServiceSet: typeof import('./src/components/tools/WOLServiceSet.vue')['default']
   }
 }
 

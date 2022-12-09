@@ -12,10 +12,13 @@ export function isIP(ip :string){
 }
 
 const MenuIndexList = ["#status",
-"#log","#whitelistset",
-"#whitelists","#blacklists","#set",
-"#login","#ddns","#ddnstasklist","#ddnsset",
-"#about","#reverseproxylist","#ssl","#portforward","#portforwardset","#wol"]
+"#log",
+"#whitelistset","#whitelists","#blacklists",
+"#set","#login","#about",
+"#ddns","#ddnstasklist","#ddnsset",
+"#reverseproxylist","#ssl",
+"#portforward","#portforwardset",
+"#wol","#wolserviceset"]
 
 export function PageExist(page:string) {
     for(let i in MenuIndexList){

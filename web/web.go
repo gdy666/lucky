@@ -19,9 +19,12 @@ import (
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gdy666/lucky/config"
-	"github.com/gdy666/lucky/socketproxy"
+	"github.com/gdy666/lucky/module/portforward/socketproxy"
+	"github.com/gdy666/lucky/module/service"
+	ssl "github.com/gdy666/lucky/module/sslcertficate"
 	"github.com/gdy666/lucky/thirdlib/gdylib/fileutils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/ginutils"
 	"github.com/gdy666/lucky/thirdlib/gdylib/logsbuffer"
@@ -31,6 +34,8 @@ import (
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
+
+	wolhttpapi "github.com/gdy666/lucky/module/wol/httpapi"
 )
 
 //go:embed adminviews/dist
@@ -39,10 +44,15 @@ var stafs fs.FS
 var loginErrorCount = int32(0)
 var rebootOnce sync.Once
 var logBuffer *logsbuffer.LogsBuffer
+var logger *logrus.Logger
 
 type LogItem struct {
 	Timestamp string `json:"timestamp"`
 	Content   string `json:"log"`
+}
+
+func GetLogger() *logrus.Logger {
+	return logger
 }
 
 func logConvert(lg *logsbuffer.LogItem) any {
@@ -53,8 +63,11 @@ func logConvert(lg *logsbuffer.LogItem) any {
 func init() {
 	stafs, _ = fs.Sub(staticFs, "adminviews/dist")
 	logBuffer = logsbuffer.Create(1024)
-	//logBuffer.SetLogItemConverFunc(logConvert)
 	log.SetOutput(io.MultiWriter(logBuffer, os.Stdout))
+	logger = logrus.New()
+	logger.SetOutput(logBuffer)
+	//logger.SetLevel(logrus.InfoLevel)
+	wolhttpapi.SetLogger(logger)
 
 }
 
@@ -134,16 +147,12 @@ func RunAdminWeb(conf *config.BaseConfigure) {
 		authorized.PUT("/api/ssl", alterSSLCertficate)
 		authorized.DELETE("/api/ssl", deleteSSLCertficate)
 
-		authorized.POST("/api/wol/device", addWOLDevice)
-		authorized.GET("/api/wol/device/wakeup", WOLDeviceWakeUp)
-		authorized.GET("/api/wol/devices", getWOLDeviceList)
-		authorized.PUT("/api/wol/device", alterWOLDevice)
-		authorized.DELETE("/api/wol/device", deleteWOLDevice)
-
 		authorized.GET("/api/info", info)
 		authorized.GET("/api/configure", configure)
 		authorized.POST("/api/configure", restoreConfigure)
 		authorized.POST("/api/getfilebase64", getFileBase64)
+
+		authorized.PUT("/api/lucky/service", optionService)
 
 		authorized.GET("/api/restoreconfigureconfirm", restoreConfigureConfirm)
 		r.PUT("/api/logout", logout)
@@ -157,6 +166,8 @@ func RunAdminWeb(conf *config.BaseConfigure) {
 
 	//r.Use(func() *gin.Context {})
 
+	wolhttpapi.RegisterAPI(r, authorized)
+
 	go func() {
 		httpListen := fmt.Sprintf(":%d", conf.AdminWebListenPort)
 		log.Printf("AdminWeb(Http) listen on %s", httpListen)
@@ -168,7 +179,7 @@ func RunAdminWeb(conf *config.BaseConfigure) {
 	}()
 
 	if conf.AdminWebListenTLS {
-		certlist := config.GetValidSSLCertficateList()
+		certlist := ssl.GetValidSSLCertficateList()
 		if len(certlist) <= 0 {
 			log.Printf("可用SSL证书列表为空,AdminWeb(Https) 监听服务中止运行")
 			return
@@ -496,4 +507,79 @@ func isLocalIP(ipstr string) bool {
 		(ip4[0] == 172 && ip4[1] >= 16 && ip4[1] <= 31) || // 172.16.0.0/12
 		(ip4[0] == 169 && ip4[1] == 254) || // 169.254.0.0/16
 		(ip4[0] == 192 && ip4[1] == 168) // 192.168.0.0/16
+}
+
+func optionService(c *gin.Context) {
+	option := c.Query("option")
+
+	//fmt.Printf("当前option:%s\n", op)
+	//retStatus :=
+	switch option {
+	case "install": //安装服务
+		err := service.InstallService()
+		if err == nil {
+
+			c.JSON(http.StatusOK, gin.H{"ret": 0, "status": service.GetServiceState()})
+			go func() {
+				service.Start()
+				<-time.After(time.Second * 1)
+				os.Exit(0)
+			}()
+			return
+		}
+		msg := err.Error()
+		if strings.Contains(msg, "Access is denied") {
+			msg = "请以管理员身份运行lucky后再次安装"
+		}
+		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": fmt.Sprintf("安装Lucky Windows服务失败:%s", msg)})
+	case "unstall": //卸载服务
+		err := service.UninstallService()
+		if err == nil {
+			c.JSON(http.StatusOK, gin.H{"ret": 0, "status": service.GetServiceState()})
+			go func() {
+				<-time.After(time.Second * 2)
+				service.Stop()
+			}()
+			return
+		}
+		msg := err.Error()
+		if strings.Contains(msg, "Access is denied") {
+			msg = "请以管理员身份运行lucky后再次卸载"
+		}
+		c.JSON(http.StatusOK, gin.H{"ret": 3, "msg": fmt.Sprintf("卸载Lucky Windows服务失败:%s", msg)})
+	case "start": //启用
+		err := service.Start()
+		if err == nil {
+			c.JSON(http.StatusOK, gin.H{"ret": 0, "status": service.GetServiceState(), "msg": "启用服务成功,程序即将重启并已后台服务形式启动,请重新登录后台"})
+			go func() {
+				<-time.After(time.Second * 1)
+				os.Exit(0)
+			}()
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ret": 5, "status": service.GetServiceState(), "msg": fmt.Sprintf("启用服务失败:%s", err.Error())})
+	case "stop":
+		go func() {
+			<-time.After(time.Second * 2)
+			service.Stop()
+		}()
+		c.JSON(http.StatusOK, gin.H{"ret": 0, "status": service.GetServiceState(), "msg": "2秒后停止lucky服务,成功后lucky会退出,后台无法登录"})
+		return
+	case "restart":
+		err := service.Restart()
+		if err == nil {
+			c.JSON(http.StatusOK, gin.H{"ret": 0, "status": service.GetServiceState(), "msg": "重启服务成功,lucky即将重启,请重新登录后台"})
+			go func() {
+				<-time.After(time.Second * 1)
+				os.Exit(0)
+			}()
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"ret": 5, "status": service.GetServiceState(), "msg": fmt.Sprintf("重启服务出错:%s", err.Error())})
+
+	default:
+		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("未知操作:%s,操作服务中止", option)})
+		return
+	}
+
 }
