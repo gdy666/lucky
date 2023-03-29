@@ -182,6 +182,12 @@
 
 
 # 更新日志
+    2023-03-29 v1.9.3
+        1.修复添加SSL路径方式判断证书错误的BUG.
+        2.添加ACME证书时默认填充随机邮箱地址
+        3.ACME 新增 ZeroSLL、Let's Encrypt(测试)、自定义接口支持。
+        4.修改httprequest超时参数，避免DDNS查询IP阻塞
+
 
     2023-03-25 v1.9.0
         1.Web反向代理默认支持WebDAV。
