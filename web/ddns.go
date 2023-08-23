@@ -5,16 +5,14 @@ import (
 	"net/http"
 	"strings"
 
-	ddnsconf "github.com/gdy666/lucky/module/ddns/conf"
-	"github.com/gdy666/lucky/module/ddns/ddnscore.go"
-	"github.com/gdy666/lucky/module/ddns/ddnsgo"
-	"github.com/gdy666/lucky/thirdlib/gdylib/dnsutils"
+	"github.com/gdy666/lucky/config"
+	"github.com/gdy666/lucky/ddnscore.go"
 	"github.com/gdy666/lucky/thirdlib/gdylib/service"
 	"github.com/gin-gonic/gin"
 )
 
 func addDDNS(c *gin.Context) {
-	var requestObj ddnsconf.DDNSTask
+	var requestObj config.DDNSTask
 
 	err := c.BindJSON(&requestObj)
 	if err != nil {
@@ -22,7 +20,7 @@ func addDDNS(c *gin.Context) {
 		return
 	}
 	//fmt.Printf("addDDNS requestObj:%v\n", requestObj)
-	err = ddnsconf.CheckDDNSTaskAvalid(&requestObj)
+	err = config.CheckDDNSTaskAvalid(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
 		return
@@ -30,7 +28,7 @@ func addDDNS(c *gin.Context) {
 
 	dealRequestDDNSTask(&requestObj)
 
-	err = ddnsgo.DDNSTaskListAdd(&requestObj)
+	err = config.DDNSTaskListAdd(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "DDNS任务添加出错"})
 		return
@@ -45,7 +43,7 @@ func addDDNS(c *gin.Context) {
 
 func deleteDDNSTask(c *gin.Context) {
 	taskKey := c.Query("key")
-	err := ddnsgo.DDNSTaskListDelete(taskKey)
+	err := config.DDNSTaskListDelete(taskKey)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Errorf("删除DDNS任务出错:%s", err.Error())})
 		return
@@ -80,39 +78,34 @@ func enableddns(c *gin.Context) {
 }
 
 func ddnsconfigure(c *gin.Context) {
-	conf := ddnsgo.GetDDNSConfigure()
+	conf := config.GetDDNSConfigure()
 
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "ddnsconfigure": conf})
 }
 
 func alterDDNSTask(c *gin.Context) {
 	taskKey := c.Query("key")
-	var requestObj ddnsconf.DDNSTask
+	var requestObj config.DDNSTask
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
 		return
 	}
 
-	err = ddnsconf.CheckDDNSTaskAvalid(&requestObj)
+	err = config.CheckDDNSTaskAvalid(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": err.Error()})
 		return
 	}
 	dealRequestDDNSTask(&requestObj)
 
-	err = ddnsgo.UpdateTaskToDDNSTaskList(taskKey, requestObj)
+	err = config.UpdateTaskToDDNSTaskList(taskKey, requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("更新DDNS任务出错:%s", err.Error())})
 		return
 	}
 
-	//ddnscore.DDNSTaskInfoMapDelete(taskKey)
-	//ddnscore.syncDomains()
-	t := ddnscore.GetDDNSTaskInfoByKey(taskKey)
-	if t != nil {
-		t.SyncDomains()
-	}
+	ddnscore.DDNSTaskInfoMapDelete(taskKey)
 
 	if requestObj.Enable {
 		service.Message("ddns", "syncDDNSTask", taskKey)
@@ -124,7 +117,7 @@ func alterDDNSTask(c *gin.Context) {
 
 func ddnsTaskList(c *gin.Context) {
 
-	conf := ddnsgo.GetDDNSConfigure()
+	conf := config.GetDDNSConfigure()
 
 	if !conf.Enable {
 		c.JSON(http.StatusOK, gin.H{"ret": 6, "msg": "请先在设置页面启用DDNS动态域名服务"})
@@ -137,7 +130,7 @@ func ddnsTaskList(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": taskList})
 }
 
-func dealRequestDDNSTask(t *ddnsconf.DDNSTask) {
+func dealRequestDDNSTask(t *config.DDNSTask) {
 
 	if t.DNS.Name == "callback" {
 		t.DNS.ID = ""
@@ -146,7 +139,7 @@ func dealRequestDDNSTask(t *ddnsconf.DDNSTask) {
 		//requestObj.DNS.Callback.CallbackSuccessContent = strings.TrimSpace(requestObj.DNS.Callback.CallbackSuccessContent)
 		t.DNS.Callback.RequestBody = strings.TrimSpace(t.DNS.Callback.RequestBody)
 	} else {
-		t.DNS.Callback = ddnsconf.DNSCallback{}
+		t.DNS.Callback = config.DNSCallback{}
 	}
 
 	if !t.DNS.ResolverDoaminCheck && len(t.DNS.DNSServerList) > 0 {
@@ -155,9 +148,9 @@ func dealRequestDDNSTask(t *ddnsconf.DDNSTask) {
 
 	if t.DNS.ResolverDoaminCheck && (len(t.DNS.DNSServerList) == 0 || (len(t.DNS.DNSServerList) == 1 && t.DNS.DNSServerList[0] == "")) {
 		if t.TaskType == "IPv6" {
-			t.DNS.DNSServerList = dnsutils.DefaultIPv6DNSServerList
+			t.DNS.DNSServerList = config.DefaultIPv6DNSServerList
 		} else {
-			t.DNS.DNSServerList = dnsutils.DefaultIPv4DNSServerList
+			t.DNS.DNSServerList = config.DefaultIPv4DNSServerList
 		}
 	}
 
@@ -225,14 +218,14 @@ func dealRequestDDNSTask(t *ddnsconf.DDNSTask) {
 }
 
 func alterDDNSConfigure(c *gin.Context) {
-	var requestObj ddnsconf.DDNSConfigure
+	var requestObj config.DDNSConfigure
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "请求解析出错"})
 		return
 	}
 
-	preConfigure := ddnsgo.GetDDNSConfigure()
+	preConfigure := config.GetDDNSConfigure()
 
 	if preConfigure.Enable != requestObj.Enable {
 
@@ -245,7 +238,7 @@ func alterDDNSConfigure(c *gin.Context) {
 
 	}
 
-	err = ddnsgo.SetDDNSConfigure(&requestObj)
+	err = config.SetDDNSConfigure(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 2, "msg": "保存配置过程发生错误,请检测相关启动配置"})
 		return

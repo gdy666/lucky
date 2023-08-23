@@ -14,7 +14,7 @@ const (
 type VoiceAssistant struct {
 	DeviceType string //语言助手类型 (设备类型).
 	VAType     string //语言助手类型  MIOT AliGenie DuerOS
-	Device     *Device
+	Device     *BlinkerDevice
 	topic      string
 }
 
@@ -31,34 +31,42 @@ func (v *VoiceAssistant) GetSKey() string {
 	}
 }
 
-func (v *VoiceAssistant) PowerChangeReply(msgid, state string) {
-	if state == "true" {
+func (v *VoiceAssistant) PowerChangeReply(msgid, st string) {
+	state := "off"
+
+	if st == "true" {
 		state = "on"
-	} else if state == "false" {
-		state = "off"
 	}
 
-	data := map[string]string{"pState": state, "messageId": msgid}
+	// if v.VAType == "MIOT" {
+	// 	if state == "on" {
+	// 		state = "true"
+	// 	} else {
+	// 		state = "false"
+	// 	}
+	// }
+
+	data := map[string]string{"pState": state}
 	v.Device.SendMessage("vAssistant", v.GetToDevice(), msgid, data)
 }
 
 func (v *VoiceAssistant) QueryDeviceState(msgid string) {
-	state := v.Device.GetState()
-	var stateStr = ""
-	if state {
-		stateStr = "on"
-	} else {
-		stateStr = "off"
-	}
-
-	data := map[string]string{"pState": stateStr, "messageId": msgid}
+	state := v.Device.state
+	// if v.VAType == "MIOT" {
+	// 	if state == "on" {
+	// 		state = "true"
+	// 	} else {
+	// 		state = "false"
+	// 	}
+	// }
+	data := map[string]string{"pState": state}
 	v.Device.SendMessage("vAssistant", v.GetToDevice(), msgid, data)
 }
 
 func (v *VoiceAssistant) GetToDevice() string {
-	if v.Device.DetailInfo.Broker == "blinker" {
-		return "ServerReceiver"
-	}
+	// if v.Device.DetailInfo.Broker == "blinker" {
+	// 	return "ServerReceiver"
+	// }
 	return v.topic
 }
 

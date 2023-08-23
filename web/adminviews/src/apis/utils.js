@@ -562,61 +562,11 @@ export function apiWOLDeviceWakeUp(key) {
 	})
 }
 
-export function apiWOLDeviceShutDown(key) {
-    return httpRequest({
-		url: '/api/wol/device/shutdown',
-		method: 'get',
-		headers:{'Authorization':GetToken()},
-		params:{_:new Date().valueOf(),key:key}
-	})
-}
-
-
 export function apiAlterWOLDevice(data) {
     return httpRequest({
 		url: '/api/wol/device',
 		method: 'put',
 		headers:{'Authorization':GetToken()},
 		data:data
-	})
-}
-
-
-export function apiGetWOLServiceConfigure() {
-    return httpRequest({
-		url: '/api/wol/service/configure',
-		method: 'get',
-		headers:{'Authorization':GetToken()},
-		params:{_:new Date().valueOf()}
-	})
-}
-
-export function apiAlterWOLServiceConfigure(data) {
-    return httpRequest({
-		url: '/api/wol/service/configure',
-		method: 'put',
-		headers:{'Authorization':GetToken()},
-		data:data,
-		params:{_:new Date().valueOf()}
-	})
-}
-
-
-export function apiGetIPv4Interface() {
-    return httpRequest({
-		url: 'api/wol/service/getipv4interface',
-		method: 'get',
-		headers:{'Authorization':GetToken()},
-		params:{_:new Date().valueOf()}
-	})
-}
-
-
-export function apiOptionsLuckyService(option) {
-    return httpRequest({
-		url: '/api/lucky/service',
-		method: 'put',
-		headers:{'Authorization':GetToken()},
-		params:{_:new Date().valueOf(),option:option}
 	})
 }

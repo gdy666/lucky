@@ -2,7 +2,7 @@ package blinker
 
 import (
 	"compress/gzip"
-	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,24 +10,11 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/buger/jsonparser"
 	MQTT "github.com/eclipse/paho.mqtt.golang"
-	"github.com/gdy666/lucky/thirdlib/gdylib/httputils"
 )
-
-const (
-	Disconnected uint32 = iota
-	Connecting
-	Reconnecting
-	Connected
-)
-
-func init() {
-
-}
 
 const (
 	HOST                = "https://iot.diandeng.tech"
@@ -36,30 +23,24 @@ const (
 	API_VOICE_ASSISTANT = HOST + "/api/v1/user/device/voice_assistant"
 )
 
-type Device struct {
-	linkState   uint32
-	authKey     string
+type BlinkerDevice struct {
+	authKey string
+
 	subTopic    string
 	pubTopic    string
 	exasubTopic string //aliyun特有
 	exapubTopic string //aliyun特有
 
 	client        MQTT.Client
-	clientMu      sync.Mutex
 	DetailInfo    BlinkerDetailInfo
 	heartBeatChan chan uint8
+	hbmu          sync.Mutex
 	preSendTime   time.Time
-	//sendMsgChan   chan message
+	sendMsgChan   chan message
+	//
+	state string
 
-	extStroe               sync.Map
-	powerChangeCallbackMap sync.Map
-	state                  bool
-	queryStateFunc         func() bool
-
-	voiceAssistants        map[string]*VoiceAssistant
-	httpClientSecureVerify bool
-	httpClientTimeout      int
-	httpclient             *http.Client
+	voiceAssistants map[string]*VoiceAssistant
 }
 
 type message struct {
@@ -69,54 +50,19 @@ type message struct {
 	Msg        any
 }
 
-func CreateDevice(ak string, httpClientSecureVerify bool, httpClientTimeout int) *Device {
-	d := &Device{authKey: ak, httpClientSecureVerify: httpClientSecureVerify, httpClientTimeout: httpClientTimeout}
+func CreateBlinkerDevice(ak string) *BlinkerDevice {
+	d := &BlinkerDevice{authKey: ak}
 	d.voiceAssistants = make(map[string]*VoiceAssistant)
-	d.httpclient, _ = httputils.CreateHttpClient(
-		"tcp",
-		"",
-		!httpClientSecureVerify,
-		"",
-		"",
-		"",
-		"",
-		time.Duration(httpClientTimeout)*time.Second)
+	d.state = "on"
 	return d
 }
 
-func (d *Device) GetState() bool {
-	if d.queryStateFunc != nil {
-		return d.queryStateFunc()
-	}
-	return d.state
-}
-func (d *Device) SetQueryStateFunc(f func() bool) {
-	d.queryStateFunc = f
-}
-
-func (d *Device) RegisterPowerChangeCallbackFunc(key string, cb func(string)) {
-	d.powerChangeCallbackMap.Store(key, cb)
-}
-
-func (d *Device) UnRegisterPowerChangeCallbackFunc(key string) {
-	d.powerChangeCallbackMap.Delete(key)
-}
-
-func (d *Device) AddVoiceAssistant(v *VoiceAssistant) {
+func (d *BlinkerDevice) AddVoiceAssistant(v *VoiceAssistant) {
 	v.Device = d
 	d.voiceAssistants[v.VAType] = v
 }
 
-func (d *Device) StoreExtData(key any, val any) {
-	d.extStroe.Store(key, val)
-}
-
-func (d *Device) GetExtData(key any) (val any, ok bool) {
-	val, ok = d.extStroe.Load(key)
-	return
-}
-
-func (d *Device) SyncAssistants() error {
+func (d *BlinkerDevice) SyncAssistants() error {
 	for _, v := range d.voiceAssistants {
 		skey := v.GetSKey()
 		dataMap := make(map[string]string)
@@ -125,7 +71,7 @@ func (d *Device) SyncAssistants() error {
 
 		dataBytes, _ := json.Marshal(dataMap)
 
-		resp, err := d.httpclient.Post(API_VOICE_ASSISTANT, "application/json", strings.NewReader(string(dataBytes)))
+		resp, err := http.Post(API_VOICE_ASSISTANT, "application/json", strings.NewReader(string(dataBytes)))
 		if err != nil {
 			return err
 		}
@@ -139,74 +85,45 @@ func (d *Device) SyncAssistants() error {
 	return nil
 }
 
-// func (d *Device) RunSenderMessageService() {
-// 	for m := range d.sendMsgChan {
-// 		t := time.Since(d.preSendTime) - time.Millisecond*1100
-// 		if t < 0 {
-// 			//log.Printf("太快,睡眠一下:%d\n", -t)
-// 			<-time.After(-t)
-// 		}
-// 		d.sendMessage(m.TargetType, m.Device, m.MessageID, m.Msg)
-// 	}
-
-// }
-
-func (d *Device) RunHeartBearTimer() {
-
-	ticker := time.NewTicker(time.Second * 599)
-
-	defer func() {
-		ticker.Stop()
-	}()
-	for {
-		select {
-		case _, ok := <-d.heartBeatChan:
-			{
-				if !ok {
-					return
-				}
-				d.heartBeat()
-
-			}
-		case <-ticker.C:
-			d.heartBeatChan <- uint8(1)
+func (d *BlinkerDevice) RunSenderMessageService() {
+	for m := range d.sendMsgChan {
+		t := time.Since(d.preSendTime) - time.Millisecond*1100
+		if t < 0 {
+			//log.Printf("太快,睡眠一下:%d\n", -t)
+			<-time.After(-t)
 		}
+		d.sendMessage(m.TargetType, m.Device, m.MessageID, m.Msg)
 	}
 
 }
 
-func (d *Device) Init() error {
+func (d *BlinkerDevice) RunHeartBearTimer() {
+	if !d.hbmu.TryLock() {
+		return
+	}
+	defer d.hbmu.Unlock()
+	log.Printf("开始心跳...\n")
+	d.heartBeatChan <- uint8(1)
+	for range d.heartBeatChan {
+		d.heartBeat()
+		<-time.After(time.Second * 599)
+		d.heartBeatChan <- uint8(1)
+	}
+	log.Printf("心跳中止...\n")
+}
+
+func (d *BlinkerDevice) Init() error {
 	apiurl := fmt.Sprintf("%s?authKey=%s", API_AUTH, d.authKey)
-	resp, err := d.httpclient.Get(apiurl)
+	resp, err := http.Get(apiurl)
 	if err != nil {
-		return fmt.Errorf("device init httpclient.Get err:%s", err.Error())
+		return fmt.Errorf("device init http.Get err:%s", err.Error())
 	}
 
 	var infoRes BlinkerInfoRes
-
-	//jsonparser.Get()
-
-	respBytes, err := GetBytesFromHttpResponse(resp)
+	err = GetAndParseJSONResponseFromHttpResponse(resp, &infoRes)
 	if err != nil {
-		return fmt.Errorf("GetBytesFromHttpResponse error:%s", err.Error())
+		return fmt.Errorf("parse DeviceInfo resp err:%s", err.Error())
 	}
-
-	messageRet, _ := jsonparser.GetInt(respBytes, "message")
-	if messageRet != 1000 {
-		detailStr, _ := jsonparser.GetString(respBytes, "detail")
-		return fmt.Errorf("%s", detailStr)
-	}
-
-	err = json.Unmarshal(respBytes, &infoRes)
-
-	if err != nil {
-		return fmt.Errorf("登录过程解析登录结果出错:\n%s\n%s", string(respBytes), err.Error())
-	}
-
-	// err = GetAndParseJSONResponseFromHttpResponse(resp, &infoRes)
-	// if err != nil {
-	// 	return fmt.Errorf("parse DeviceInfo resp err:%s", err.Error())
-	// }
 
 	d.DetailInfo = infoRes.Detail
 
@@ -237,30 +154,7 @@ func (d *Device) Init() error {
 	return nil
 }
 
-func (d *Device) closeMQTTClient() {
-	d.clientMu.Lock()
-	defer d.clientMu.Unlock()
-	if d.client == nil {
-		return
-	}
-	log.Printf("点灯科技 [%s]主动关闭连接", d.authKey)
-	d.client.Disconnect(0)
-	close(d.heartBeatChan)
-	//close(d.sendMsgChan)
-	d.client = nil
-}
-
-func (d *Device) OnLine() bool {
-	state := atomic.LoadUint32(&d.linkState)
-	return state == Connected
-}
-
-func (d *Device) IsDisconnected() bool {
-	state := atomic.LoadUint32(&d.linkState)
-	return state == Disconnected
-}
-
-func (d *Device) Login() error {
+func (d *BlinkerDevice) Login() error {
 	opts := MQTT.NewClientOptions()
 
 	brokeyURL := fmt.Sprintf("%s:%s", d.DetailInfo.Host, d.DetailInfo.Port)
@@ -270,71 +164,69 @@ func (d *Device) Login() error {
 	opts.SetClientID(d.DetailInfo.DeviceName)
 	opts.SetUsername(d.DetailInfo.IotID)
 	opts.SetPassword(d.DetailInfo.IotToken)
-	opts.SetConnectTimeout(time.Second * 2)
-	opts.SetKeepAlive(time.Second * 30)
-	opts.SetTLSConfig(&tls.Config{InsecureSkipVerify: !d.httpClientSecureVerify})
-	opts.SetAutoReconnect(true)
-	opts.ConnectRetryInterval = time.Second * 3
+
+	//opts.SetKeepAlive(time.Second * 3)
+	//opts.WillRetained = true
+
+	//choke := make(chan [2]string)
+	// opts.SetDefaultPublishHandler(func(client MQTT.Client, msg MQTT.Message) {
+	// 	//choke <- [2]string{msg.Topic(), string(msg.Payload())}
+	// 	msg.Payload()
+	// })
 
 	opts.SetOnConnectHandler(func(c MQTT.Client) {
-		atomic.StoreUint32(&d.linkState, Connected)
-		log.Printf("点灯物联 [%s]已连接\n", d.authKey)
-		d.clientMu.Lock()
-		defer d.clientMu.Unlock()
+		log.Printf("连接成功!")
 		d.client = c
 		c.Subscribe(d.subTopic, byte(0), d.ReceiveMessageHandler)
+		//c.Subscribe(d.exasubTopic, byte(0), d.ReceiveMessageHandler)
 		d.heartBeatChan = make(chan uint8, 1)
 		go d.RunHeartBearTimer()
-		//d.sendMsgChan = make(chan message, 8)
-		//go d.RunSenderMessageService()
+		d.sendMsgChan = make(chan message, 8)
+		go d.RunSenderMessageService()
 	})
 
-	//d.client.Disconnect()
+	opts.OnConnectionLost = func(c MQTT.Client, err error) {
+		log.Printf("连接丢失:%s\n", err.Error())
+		close(d.heartBeatChan)
+		close(d.sendMsgChan)
+		d.client = nil
+	}
 
-	opts.SetConnectionLostHandler(func(c MQTT.Client, err error) {
-		log.Printf("点灯物联 [%s]连接丢失:%s\n", d.authKey, err.Error())
-		atomic.StoreUint32(&d.linkState, Disconnected)
-		//d.closeMQTTClient()
-		//fmt.Printf("SetConnectionLostHandler\n")
-	})
+	//opts.
 
-	opts.SetReconnectingHandler(func(c MQTT.Client, opt *MQTT.ClientOptions) {
-		atomic.StoreUint32(&d.linkState, Reconnecting)
-	})
 	client := MQTT.NewClient(opts)
+
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		return fmt.Errorf("连接出错:%s", token.Error())
 	}
+
+	<-time.After(time.Second * 60000)
+
 	return nil
 }
 
-func (d *Device) Stop() {
-
-	d.closeMQTTClient()
-}
-
-func (d *Device) heartBeat() error {
+func (d *BlinkerDevice) heartBeat() error {
 
 	//hr := fmt.Sprintf("%s?deviceName=%s&key=%s&heartbeat=600", SERVER+HEARTBEAT_URL, d.DetailInfo.DeviceName, d.authKey)
 
 	hr := fmt.Sprintf("%s?deviceName=%s&key=%s&heartbeat=600", API_HEARTBEAT, d.DetailInfo.DeviceName, d.authKey)
-	resp, err := d.httpclient.Get(hr)
+	resp, err := http.Get(hr)
 	if err != nil {
-		return fmt.Errorf("device init httpclient.Get err:%s", err.Error())
+		return fmt.Errorf("device init http.Get err:%s", err.Error())
 	}
 
-	_, err = GetBytesFromHttpResponse(resp)
+	respBytes, err := GetBytesFromHttpResponse(resp)
 	if err != nil {
 		return err
 	}
 
-	//fmt.Printf("HearBeat:%s\n", string(respBytes))
+	fmt.Printf("HearBeat:%s\n", string(respBytes))
 	return nil
 }
 
-func (d *Device) ReceiveMessageHandler(c MQTT.Client, m MQTT.Message) {
+func (d *BlinkerDevice) ReceiveMessageHandler(c MQTT.Client, m MQTT.Message) {
 
-	//log.Printf("接收到MQTT消息:\n[【%s】\n%s\n\n", m.Topic(), m.Payload())
+	log.Printf("接收到MQTT消息:【%s】%s\n", m.Topic(), m.Payload())
 
 	if m.Topic() != d.subTopic {
 		return
@@ -362,9 +254,9 @@ func (d *Device) ReceiveMessageHandler(c MQTT.Client, m MQTT.Message) {
 
 }
 
-func (d *Device) voiceAssistantMessageHandler(from string, msg []byte) {
+func (d *BlinkerDevice) voiceAssistantMessageHandler(from string, msg []byte) {
 
-	//fmt.Printf("from:%s msg:%s\n", from, string(msg))
+	fmt.Printf("from:%s msg:%s\n", from, string(msg))
 
 	va, ok := d.voiceAssistants[from]
 	if !ok {
@@ -393,28 +285,14 @@ func (d *Device) voiceAssistantMessageHandler(from string, msg []byte) {
 
 }
 
-func (d *Device) powerChange(va *VoiceAssistant, msgId, state string) {
+func (d *BlinkerDevice) powerChange(va *VoiceAssistant, msgId, state string) {
+	d.state = state
 	if va != nil {
 		va.PowerChangeReply(msgId, state)
 	}
-
-	if state == "true" || state == "on" {
-		d.state = true
-	} else {
-		d.state = false
-	}
-
-	go func() {
-		d.powerChangeCallbackMap.Range(func(key any, val any) bool {
-			cb := val.(func(string))
-			cb(state)
-			return true
-		})
-	}()
-
 }
 
-func (d *Device) ownAppMessagehandler(msg []byte) {
+func (d *BlinkerDevice) ownAppMessagehandler(msg []byte) {
 	getValue, getKeyError := jsonparser.GetString(msg, "data", "get")
 	if getKeyError == nil {
 		switch getValue {
@@ -425,7 +303,7 @@ func (d *Device) ownAppMessagehandler(msg []byte) {
 		case "countdown":
 			d.SendMessage("OwnApp", d.DetailInfo.UUID, "", map[string]any{"countdown": "false"}) //`{ "countdown": false }`
 		default:
-			//fmt.Printf(` "data", "get":Value:%s`, getValue)
+			fmt.Printf(` "data", "get":Value:%s`, getValue)
 		}
 
 		return
@@ -447,37 +325,34 @@ type mess2assistant struct {
 	MessageID  string `json:"-"` //`json:"messageId"`
 }
 
-func (d *Device) formatMess2assistant(targetType, toDevice, msgid string, data any) ([]byte, error) {
+func (d *BlinkerDevice) formatMess2assistant(targetType, toDevice, msgid string, data any) ([]byte, error) {
 	m := mess2assistant{DeviceType: targetType, Data: data, FromDeivce: d.DetailInfo.DeviceName, ToDevice: toDevice, MessageID: msgid}
 	rawBytes, err := json.Marshal(m)
 	if err != nil {
 		return []byte{}, err
 	}
 
-	//str := base64.StdEncoding.EncodeToString(rawBytes)
-	//log.Printf("回复语音助手:%s\n", string(rawBytes))
+	str := base64.StdEncoding.EncodeToString(rawBytes)
+	log.Printf("回复语音助手:%s\n", string(rawBytes))
 	//fmt.Printf("base64:%s\n", str)
 
-	//return []byte(str), nil
-	return rawBytes, nil
+	return []byte(str), nil
+	//return rawBytes, nil
 }
 
-func (d *Device) formatMess2Device(targetType, toDevice string, data any) ([]byte, error) {
+func (d *BlinkerDevice) formatMess2Device(targetType, toDevice string, data any) ([]byte, error) {
 	m := mess2device{DeviceType: targetType, Data: data, FromDeivce: d.DetailInfo.DeviceName, ToDevice: toDevice}
 	return json.Marshal(m)
 }
 
-func (d *Device) SendMessage(targetType, todevice, msgid string, msg any) {
-	//m := message{Device: todevice, Msg: msg, TargetType: targetType, MessageID: msgid}
-	//d.sendMsgChan <- m
-	d.sendMessage(targetType, todevice, msgid, msg)
+func (d *BlinkerDevice) SendMessage(targetType, todevice, msgid string, msg any) {
+	m := message{Device: todevice, Msg: msg, TargetType: targetType, MessageID: msgid}
+	d.sendMsgChan <- m
 }
 
-func (d *Device) sendMessage(targetType, todevice, msgid string, msg any) error {
-	d.clientMu.Lock()
-	defer d.clientMu.Unlock()
+func (d *BlinkerDevice) sendMessage(targetType, todevice, msgid string, msg any) error {
 	if d.client == nil {
-		return fmt.Errorf("d.Client == nil")
+		return fmt.Errorf("SendMessage error:client == nil")
 	}
 	var pubTopic string
 	var payload []byte
@@ -499,10 +374,10 @@ func (d *Device) sendMessage(targetType, todevice, msgid string, msg any) error 
 		}
 	}
 
-	// fmt.Printf("topic:%s\n", pubTopic)
+	fmt.Printf("topic:%s\n", pubTopic)
 
-	if token := d.client.Publish(pubTopic, 1, true, payload); token.Wait() && token.Error() != nil {
-		//fmt.Printf("Publish error:%s\n", token.Error())
+	if token := d.client.Publish(pubTopic, 0, false, payload); token.Wait() && token.Error() != nil {
+		fmt.Printf("Publish error:%s\n", token.Error())
 		return token.Error()
 	}
 	d.preSendTime = time.Now()
@@ -553,8 +428,6 @@ func GetAndParseJSONResponseFromHttpResponse(resp *http.Response, result interfa
 	if err != nil {
 		return fmt.Errorf("GetBytesFromHttpResponse err:%s", err.Error())
 	}
-
-	//	fmt.Printf("FUCK:\n%s\n", string(bytes))
 	if len(bytes) > 0 {
 		err = json.Unmarshal(bytes, &result)
 		if err != nil {

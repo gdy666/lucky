@@ -11,7 +11,6 @@ import (
 // NetInterface 本机网络
 type NetInterface struct {
 	NetInterfaceName string
-	HardwareAddr     string
 	AddressList      []string
 }
 
@@ -52,7 +51,6 @@ func GetNetInterface() (ipv4NetInterfaces []NetInterface, ipv6NetInterfaces []Ne
 					ipv4NetInterfaces,
 					NetInterface{
 						NetInterfaceName: allNetInterfaces[i].Name,
-						HardwareAddr:     allNetInterfaces[i].HardwareAddr.String(),
 						AddressList:      ipv4,
 					},
 				)
@@ -195,59 +193,4 @@ func GetBroadcast(ip net.IP, mask net.IPMask) string {
 		bcst[ipIdx] = ip[ipIdx] | ^mask[len(mask)-i-1]
 	}
 	return bcst.String()
-}
-
-// ----------------------------------------------------------------
-// NetInterface 本机网络
-type NetInterfaceInfo struct {
-	NetInterfaceName string
-	HardwareAddr     string
-	AddressList      []IPInfo
-}
-
-type IPInfo struct {
-	IP          string
-	BroadcastIP string
-}
-
-// GetNetInterface 获得网卡地址
-// 返回ipv4, ipv6地址
-func GetIPv4NetInterfaceInfoList() (ipv4NetInterfaces []NetInterfaceInfo, err error) {
-	allNetInterfaces, err := net.Interfaces()
-	if err != nil {
-		return ipv4NetInterfaces, err
-	}
-
-	for i := 0; i < len(allNetInterfaces); i++ {
-		if (allNetInterfaces[i].Flags & net.FlagUp) != 0 {
-			addrs, _ := allNetInterfaces[i].Addrs()
-			ipv4 := []IPInfo{}
-
-			for _, address := range addrs {
-				if ipnet, ok := address.(*net.IPNet); ok && ipnet.IP.IsGlobalUnicast() {
-					_, bits := ipnet.Mask.Size()
-					// 需匹配全局单播地址
-					//if bits == 128 && ipv6Unicast.Contains(ipnet.IP) {
-					if bits == 32 {
-						info := IPInfo{IP: ipnet.IP.String(), BroadcastIP: GetBroadcast(ipnet.IP, ipnet.Mask)}
-						ipv4 = append(ipv4, info)
-					}
-				}
-			}
-
-			if len(ipv4) > 0 {
-				ipv4NetInterfaces = append(
-					ipv4NetInterfaces,
-					NetInterfaceInfo{
-						NetInterfaceName: allNetInterfaces[i].Name,
-						HardwareAddr:     allNetInterfaces[i].HardwareAddr.String(),
-						AddressList:      ipv4,
-					},
-				)
-			}
-
-		}
-	}
-
-	return ipv4NetInterfaces, nil
 }

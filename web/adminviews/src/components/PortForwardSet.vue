@@ -154,6 +154,7 @@ const RequestAlterPortForwardConfigure = () => {
 
 onMounted(() => {
     queryPortForwardsConfigure()
+
 })
 
 </script>

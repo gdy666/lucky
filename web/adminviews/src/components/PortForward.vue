@@ -1033,10 +1033,6 @@ onMounted(() => {
 
 })
 
-onUnmounted(() => {
-    clearInterval(timerID)
-})
-
 </script>
 
 

@@ -6,18 +6,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gdy666/lucky/module/safe"
-	safeconf "github.com/gdy666/lucky/module/safe/conf"
+	"github.com/gdy666/lucky/config"
 	"github.com/gdy666/lucky/thirdlib/gdylib/ginutils"
 	"github.com/gin-gonic/gin"
 )
 
 func whitelistConfigure(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": safe.GetWhiteListBaseConfigure()})
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": config.GetWhiteListBaseConfigure()})
 }
 
 func alterWhitelistConfigure(c *gin.Context) {
-	var requestObj safeconf.WhiteListBaseConfigure
+	var requestObj config.WhiteListBaseConfigure
 	err := c.BindJSON(&requestObj)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "修改请求解析出错"})
@@ -30,7 +29,7 @@ func alterWhitelistConfigure(c *gin.Context) {
 		return
 	}
 
-	err = safe.SetWhiteListBaseConfigure(requestObj.ActivelifeDuration, requestObj.URL, requestObj.BasicAccount, requestObj.BasicPassword)
+	err = config.SetWhiteListBaseConfigure(requestObj.ActivelifeDuration, requestObj.URL, requestObj.BasicAccount, requestObj.BasicPassword)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "保存白名单配置出错"})
@@ -40,13 +39,13 @@ func alterWhitelistConfigure(c *gin.Context) {
 }
 
 func querywhitelist(c *gin.Context) {
-	resList := safe.GetWhiteList()
+	resList := config.GetWhiteList()
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": resList})
 }
 
 func deleteblacklist(c *gin.Context) {
 	ip := c.Query("ip")
-	err := safe.BlackListDelete(ip)
+	err := config.BlackListDelete(ip)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "删除黑名单指定IP出错"})
 		return
@@ -56,7 +55,7 @@ func deleteblacklist(c *gin.Context) {
 
 func deletewhitelist(c *gin.Context) {
 	ip := c.Query("ip")
-	err := safe.WhiteListDelete(ip)
+	err := config.WhiteListDelete(ip)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "删除白名单指定IP出错"})
 		return
@@ -69,7 +68,7 @@ func flushblacklist(c *gin.Context) {
 	activelifeDurationStr := c.Query("life")
 	life, _ := strconv.Atoi(activelifeDurationStr)
 
-	newTime, err := safe.BlackListAdd(ip, int32(life))
+	newTime, err := config.BlackListAdd(ip, int32(life))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("刷新IP有效期出错:%s", err.Error())})
 		return
@@ -82,7 +81,7 @@ func flushwhitelist(c *gin.Context) {
 	activelifeDurationStr := c.Query("life")
 	life, _ := strconv.Atoi(activelifeDurationStr)
 
-	newTime, err := safe.WhiteListAdd(ip, int32(life))
+	newTime, err := config.WhiteListAdd(ip, int32(life))
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": fmt.Sprintf("刷新IP有效期出错:%s", err.Error())})
 		return
@@ -91,12 +90,12 @@ func flushwhitelist(c *gin.Context) {
 }
 
 func queryblacklist(c *gin.Context) {
-	resList := safe.GetBlackList()
+	resList := config.GetBlackList()
 	c.JSON(http.StatusOK, gin.H{"ret": 0, "data": resList})
 }
 
 func whitelistBasicAuth(c *gin.Context) {
-	bc := safe.GetWhiteListBaseConfigure()
+	bc := config.GetWhiteListBaseConfigure()
 	whilelistURL := c.Param("url")
 	if (c.Request.RequestURI == "/wl" && bc.URL != "") || whilelistURL != bc.URL {
 		c.AbortWithStatus(http.StatusNotFound)
@@ -117,7 +116,7 @@ func whitelistBasicAuth(c *gin.Context) {
 
 func whilelistAdd(c *gin.Context) {
 
-	lifeTime, err := safe.WhiteListAdd(c.ClientIP(), 0)
+	lifeTime, err := config.WhiteListAdd(c.ClientIP(), 0)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"ret": 1, "msg": "记录白名单IP出错"})
 		return
