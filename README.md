@@ -90,15 +90,7 @@
 
 ## OpenwrtIPK包安装
 
-- [Openwrt IPK包下载页面](https://github.com/gdy666/luci-app-lucky/releases)
-
-    如果第一次安装不知道自己设备的CPU架构,可以先安装
-    luci-app-lucky_XXX_all.ipk 和 luci-i18n-lucky-zh-cn_XXX_all.ipk
-    然后登录openwrt后台在菜单 服务---lucky 页面查看显示的CPU架构,
-    然后安装相应架构的lucky_XXX_Openwrt_(CPU架构) IPK.
-
-    如果原来已经通过一键脚本方式安装了lucky,请在安装ipk包之前卸载(重新执行一次一键安装指令,选项2卸载.)
-    卸载lucky之前可以在lucky后台的设置页面下载备份配置.
+- [Openwrt IPK包](https://github.com/gdy666/luci-app-lucky)
 
 
 ## 使用
@@ -111,12 +103,11 @@
   默认登录账号: 666
   默认登录密码: 666
 
-- 常规使用请用 -c <配置文件路径> 指定配置文件的路由方式运行 , -p <后台端口> 可以指定后台管理端口
+- 常规使用请用 -cd <配置文件夹路径> 指定配置文件夹的方式运行 
     ```bash
-    #仅指定配置文件路径(如果配置文件不存在会自动创建),建议使用绝对路径
-    lucky -c 666.conf
-    #同时指定后台端口 8899
-    lucky -c 666.conf -p 8899
+    #仅指定配置文件夹路径(如果配置文件夹不存在会自动创建),建议使用绝对路径
+    lucky -cd luckyconf
+
     ```
 
 
@@ -134,7 +125,7 @@
   ```
 
 - 在浏览器中打开`http://主机IP:16601`，修改你的配置，成功
-- [可选] 挂载主机目录, 删除容器后配置不会丢失。可替换 `/root/luckyconf` 为主机目录, 配置文件为lucky.conf
+- [可选] 挂载主机目录, 删除容器后配置不会丢失。可替换 `/root/luckyconf` 为主机目录, 配置文件夹为lucky
 
   ```bash
   docker run -d --name lucky --restart=always --net=host -v /root/luckyconf:/goodluck gdy666/lucky
