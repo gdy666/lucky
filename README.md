@@ -67,7 +67,7 @@ Lucky 的核心程序完全采用 Golang 实现，具有高效、稳定、跨平
   2. 支持全功能自定义回调（Callback），包括设置 BasicAuth，方便接入任意 DNS 服务商。
   3. Webhook 支持自定义 headers。
   4. 内置常用免费 DNS 服务商设置模板（每步、No-IP、Dynv6、Dynu），通过自定义回调进行快速接入，仅需修改相应用户密码或 token 即可一键填充。
-  5. 支持 阿里云，百度云，华为云，京东云，腾讯云，火山引擎，Cloudflare，DNSPod.CN，DNSPod.COM，Dynadot，Dynv6，Freemyip ,GoDaddy，Name.com，Porkbun，Vercel等服务商。
+  5. 支持 阿里云，百度云，华为云，京东云，腾讯云，火山引擎，帝恩爱斯-DNS.LA,Cloudflare，deSEC,DNSPod.CN，DNSPod.COM，Dynadot，Dynv6，Freemyip ,GoDaddy，Name.com，NameSilo,Porkbun，Vercel等服务商。
 
 
 ### Web服务
@@ -94,7 +94,7 @@ Lucky 的核心程序完全采用 Golang 实现，具有高效、稳定、跨平
 
 ###  ACME自动证书
   1. 支持 ACME 自动证书的申请和续签。
-  2. 支持 阿里云，百度云，华为云，京东云，腾讯云，火山引擎，Cloudflare，DNSPod.CN，DNSPod.COM，Dynadot，Dynv6，Freemyip ,GoDaddy，Name.com，Porkbun，Vercel等.
+  2. 支持 阿里云，百度云，华为云，京东云，腾讯云，火山引擎，帝恩爱斯-DNS.LA,Cloudflare，deSEC,DNSPod.CN，DNSPod.COM，Dynadot，Dynv6，Freemyip ,GoDaddy，Name.com，NameSilo,Porkbun，Vercel等服务商.
 
 
 ### 网络存储
@@ -199,17 +199,12 @@ Lucky 的核心程序完全采用 Golang 实现，具有高效、稳定、跨平
 
 # 更新日志
 
-    2024-06-26 v2.10.5
-        1. DDNS、ACME新增支持DnsPod.COM（国际版）、火山引擎、Vercel、Dynadot
-        2. Web服务新增“关闭连接”类型
-        3. DDNS列表改善获取公网IP错误时的提示
-        4. DDNS现在支持识别用户设置的自定义多级域名后缀
-        5. 证书模块前后端优化
-        6. 修复已知bug和其它细节优化。
-        7. 新增了适用于 FreeBSD 系统的版本。
+    2024-07-09 v2.10.8
+      1. DDNS和ACME模块 新增支持deSEC、NameSilo和帝恩爱斯-DNSLA的。
+      2. 修复了Webhook中未知变量被替换为空的问题。
+      3. 修复了DDNS模块上一版本可能未能及时更新记录的问题
 
         
-
 
    [更多日志请查看](https://lucky666.cn/docs/category/%E6%9B%B4%E6%96%B0%E6%97%A5%E5%BF%97)
 
