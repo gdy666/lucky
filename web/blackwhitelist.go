@@ -122,5 +122,5 @@ func whilelistAdd(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": "IP已记录进白名单", "ip": c.ClientIP(), " effective_time": lifeTime})
+	c.JSON(http.StatusOK, gin.H{"ret": 0, "msg": "IP已记录进白名单", "ip": c.ClientIP(), "effective_time": lifeTime})
 }
