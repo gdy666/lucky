@@ -1,0 +1,1 @@
+docker run -d --name lucky --restart=always --net=host gdy666/lucky
