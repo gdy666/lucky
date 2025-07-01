@@ -1,5 +1,11 @@
 # Lucky(万吉)
  
+ 本项目 CDN 加速及安全防护由 Tencent EdgeOne 赞助
+ [亚洲最佳CDN、边缘和安全解决方案 - Tencent EdgeOne](https://edgeone.ai/zh?from=github)
+
+ ![](https://edgeone.ai/media/34fe3a45-492d-4ea4-ae5d-ea1087ca7b4b.png)
+ 
+
 
  ## 注意：源码公布到1.4.10版本，后续暂无继续开源计划。
 
