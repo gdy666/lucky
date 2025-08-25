@@ -171,33 +171,6 @@ Lucky 的核心程序完全采用 Golang 实现，具有高效、稳定、跨平
 
 
 
-## 后台界面
-![规则设置](./previews/relayruleset.png)
-![规则列表](./previews/relayrules.png)
-![](./previews/whitelistset.png)
-![](./previews/whitelist.png)
-#### 动态域名服务
-
-![](./previews/ddnslist.png)
-
-
-![](./previews/iphistroy.png)
-
-![](./previews/webhookhistroy.png)
-
-![](./previews/domainsync.png)
-
-#### Http反向代理
-![](./previews/reverseproxy.png)
-
-#### 网络唤醒
-
-![](./previews/wol001.png)
-
-![](./previews/wol002.png)
-
-
-
 
 #开发编译
 
@@ -208,6 +181,52 @@ Lucky 的核心程序完全采用 Golang 实现，具有高效、稳定、跨平
 
 
 # 更新日志
+
+    2025-08-24 v2.18.5 更新日志
+        1. 修复由低于 v2.15.0 的版本升级时，可能导致 DDNS 配置丢失的情况。
+        2. 修复前端已知 Bug
+        3. Web 服务功能优化
+        新增主规则快捷编辑功能：
+        支持批量添加、修改、删除前端域名；
+        支持批量替换、修改后端配置；
+        新增「复制 Web 服务规则」功能。
+        4.rclone 升级至 v1.17.0。
+        5. Filebrowser 升级至 v2.42.6。
+
+    2025-08-17 v2.18.4
+        1. 使用 Go 1.25.0 编译构建,macOS 系统最低支持版本提升至 12.0 及以上。
+        2. 登录优化：修复切换后端时未勾选“记住密码”导致账号密码无法自动填充的问题。
+        3. 后端服务器列表支持 导入/导出。前端使用 HTTPS 时，会阻止连接到 HTTP 后端并提示。
+        4. lucky后台设置页面新增 后端列表备份与恢复 功能。
+        5. Filebrowser 升级至 v2.42.5。
+        6. Cloudflare 隧道新增 定时检查与自动重连 机制。
+
+    2025-08-13 v2.18.3 beta1
+        1. Lucky & 万吉：新增 Core 精简版本
+            移除了前端文件，二进制文件体积比标准版减少约 1 MB，适合存储空间有限的路由器环境。
+            Core 版访问 Lucky 后台时，将自动跳转至公共前端地址：https://lucky.666666.host/<版本号> 进行登录。
+            登录页面底部提供自定义后端管理入口，可方便绑定自己的 Lucky Core 节点。.
+            也可使用自建的非 Core 版前端来管理 Core 版实例。
+        2. 前端优化与 Bug 修复
+            修复：禁用安全入口检测后，仍提示安全入口未设置的问题（临时解决方法：刷新页面）。
+            登录页面新增“管理切换后端”入口，方便快速切换和访问不同 Lucky 后端。
+        3. FileBrowser 升级至 v2.42.3。
+        4. DDNS 优化
+            修复偶发任务阻塞问题。
+            修复多个 DDNS 调整顺序后，前端列表显示异常的问题。
+        5.域名与证书
+            修复 deSEC.io 申请证书时出错的问题。
+            针对不同域名托管商的最小 TTL，自动调整传播检测超时时间。
+        6.NTP 服务优化
+            内置 NTP 服务器列表更新，部分支持 IPv4/IPv6 双栈
+
+    2025-08-03 v2.18.2beta1
+        1. DDNS模块与ACME证书模块新增对EdgeOne接口的支持（兼容中国版与国际版）。
+        2. 万吉集成了Cloudflare Tunnel客户端，提升远程访问能力。
+        令牌获取方法：在隧道概述页面中，运行以下命令： cloudflared.exe service install XXX，其中最后一个参数即为所需的令牌。
+        没有集成FRP的计划，无须重复咨询。
+        3. filebrowser 更新至 2.42.1 版本。
+        4. rclone 更新至 v1.70.2 版本。
 
     2025-07-12 v2.18.1
       1.FileBrowser 更新至 v2.37.0
