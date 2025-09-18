@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (C) gdy
+# Copyright (CR) gdy
 
 luckydir=/data/lucky.daji
 profile=/etc/profile
