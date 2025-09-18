@@ -6,7 +6,7 @@ profile=/etc/profile
 
 sed -i '/alias lucky=*/'d $profile
 sed -i '/export luckydir=*/'d $profile
-#h初始化环境变量
+#h初 始 化 环 境 变 量
 echo "alias lucky=\"$luckydir/lucky\"" >> $profile 
 echo "export luckydir=\"$luckydir\"" >> $profile 
 
