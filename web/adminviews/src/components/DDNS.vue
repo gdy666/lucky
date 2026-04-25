@@ -1167,6 +1167,10 @@ const DNSCallbackServerList = [
         label: 'Dynu',
     },
     {
+        value: 'vps8',
+        label: 'VPS8',
+    },
+    {
         value: 'other',
         label: '其它',
     },
@@ -2322,6 +2326,19 @@ const autocompleteCallbackForm = () => {
                     DDNSForm.value.DNS.Callback.CallbackSuccessContent = ["nochg", "good #{ip}"]
                     DDNSFormCallbackSuccessContentArea.value = 'nochg\ngood #{ip}'
                     break;
+                case "vps8":
+                    DDNSForm.value.DNS.Callback.URL = 'https://vps8.zz.cd/api/client/servicedns/ddns_update'
+                    DDNSFormCallbackHeaderArea.value = "BasicAuthUserName:client\nBasicAuthPassword:这里填写你的DDNS令牌\nContent-Type: application/json"
+                    DDNSForm.value.DNS.Callback.Headers = [
+                        'BasicAuthUserName:client',
+                        'BasicAuthPassword:这里填写你的DDNS令牌',
+                        'Content-Type: application/json',
+                    ]
+                    DDNSForm.value.DNS.Callback.Method = 'post'
+                    DDNSForm.value.DNS.Callback.RequestBody = '{\n "domain": "#{domain}",\n "record_type": "#{recordType}",\n "record_value": "#{ip}",\n "ttl": #{ttl}\n}'
+                    DDNSForm.value.DNS.Callback.DisableCallbackSuccessContentCheck = true
+                    DDNSForm.value.DNS.Callback.CallbackSuccessContent = []
+                    DDNSFormCallbackSuccessContentArea.value = ''
                     break
                 default:
             }
